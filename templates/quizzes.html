@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ t.available_quizzes }}</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="row">
+        {% if quizzes %}
+            {% for quiz in quizzes %}
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ quiz.title }}</h5>
+                            <p class="card-text text-muted">
+                                Questions: {{ quiz.questions|length }}
+                                {% if quiz._id|string in completed_quizzes %}
+                                    <span class="badge bg-success">Completed</span>
+                                {% endif %}
+                            </p>
+                            <small class="text-muted d-block mb-2">Created on: {{ quiz.date_created.strftime('%B %d, %Y') }}</small>
+                            <a href="{{ url_for('take_quiz', quiz_id=quiz._id) }}" class="btn btn-primary">
+                                {% if quiz._id|string in completed_quizzes %}
+                                    Retake Quiz
+                                {% else %}
+                                    Start Quiz
+                                {% endif %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="col">
+                <p>No quizzes available yet.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

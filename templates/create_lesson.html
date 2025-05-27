@@ -1,0 +1,490 @@
+{% extends "base.html" %}
+{% block title %}{{ t.create_lesson }}{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h2>{{ t.create_lesson }}</h2>
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data" id="lessonForm">
+    <div class="form-group">
+                    <label for="lesson_title">{{ t.lesson_title }}</label>
+                    <input type="text" class="form-control" id="lesson_title" name="lesson_title" required>
+                </div>
+                
+                <div id="slides-container">
+                    <!-- First slide -->
+                    <div class="slide-editor mb-4" data-slide="0">
+                        <h4>{{ t.slide }} 1</h4>
+                        <div class="editor-toolbar mb-2">
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertImage(0)">
+                                    <i class="fas fa-image"></i> {{ t.insert_image }}
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertAudio(0)">
+                                    <i class="fas fa-file-audio"></i> {{ t.add_audio }}
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="startRecording(0)">
+                                    <i class="fas fa-microphone"></i> {{ t.record_audio }}
+                                </button>
+                            </div>
+                        </div>
+                        <textarea class="form-control slide-content" name="slide_content" rows="6" required></textarea>
+                        <input type="file" class="slide-image-input" style="display: none" accept="image/*">
+                        <input type="file" class="slide-audio-input" style="display: none" accept="audio/*">
+                        <input type="hidden" name="slide_image" class="slide-image-path">
+                        <input type="hidden" name="slide_audio" class="slide-audio-path">
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-secondary mb-3" onclick="addSlide()">
+                    {{ t.add_slide }}
+                </button>
+
+                <!-- Add this after the slides container -->
+                <div class="card mt-4 mb-4">
+                    <div class="card-header">
+                        <h4>{{ t.lesson_quiz }}</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" id="hasQuiz" name="has_quiz">
+                            <label class="form-check-label" for="hasQuiz">{{ t.add_lesson_quiz }}</label>
+                        </div>
+                        
+                        <div id="quizSection" style="display: none;">
+                            <div id="questionContainer">
+                                <!-- First question -->
+                                <div class="question-block mb-4">
+                                    <div class="form-group">
+                                        <label>{{ t.question }} 1</label>
+                                        <input type="text" class="form-control" name="quiz_questions[]" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>{{ t.answer }}</label>
+                                        <input type="text" class="form-control" name="quiz_answers[]" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-secondary" onclick="addQuestion()">
+                                {{ t.add_question }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-primary">{{ t.create_lesson }}</button>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">{{ t.cancel }}</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add recording modal -->
+<div class="modal fade" id="recordingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ t.record_audio }}</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="recordingStatus" class="mb-3">{{ t.press_to_record }}</div>
+                <button id="recordButton" class="btn btn-danger btn-lg mb-3">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <div id="recordingPreview" style="display: none;">
+                    <audio id="recordingPlayback" controls></audio>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ t.cancel }}</button>
+                <button type="button" class="btn btn-primary" onclick="saveRecording()" disabled id="saveRecording">
+                    {{ t.save_recording }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add this modal for microphone permissions -->
+<div class="modal fade" id="micPermissionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ t.mic_permission_needed }}</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <i class="fas fa-microphone-slash fa-3x text-danger mb-3"></i>
+                    <p>{{ t.mic_permission_explanation }}</p>
+                </div>
+                <div class="browser-instructions">
+                    <h6>{{ t.enable_mic_instructions }}</h6>
+                    <ol>
+                        <li>{{ t.click_lock_icon }} <i class="fas fa-lock"></i></li>
+                        <li>{{ t.find_microphone_settings }}</li>
+                        <li>{{ t.select_allow }}</li>
+                        <li>{{ t.refresh_page }}</li>
+                    </ol>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ t.cancel }}</button>
+                <button type="button" class="btn btn-primary" onclick="requestMicPermission()">
+                    {{ t.try_again }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.slide-editor {
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 5px;
+    background: #f8f9fa;
+}
+
+.lesson-image {
+    max-width: 100%;
+    max-height: 400px;
+    width: auto;
+    height: auto;
+    display: block;
+    margin: 1rem auto;
+}
+
+.media-preview {
+    margin-top: 10px;
+    padding: 10px;
+    background: #fff;
+    border-radius: 4px;
+}
+
+.audio-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+</style>
+
+<script>
+const t = {
+    slide: "{{ t.slide }}",
+    remove_slide: "{{ t.remove_slide }}",
+    insert_image: "{{ t.insert_image }}",
+    add_audio: "{{ t.add_audio }}",
+    preview: "{{ t.preview }}",
+    recording: "{{ t.recording }}",
+    recording_in_progress: "{{ t.recording_in_progress }}",
+    recording_complete: "{{ t.recording_complete }}",
+    press_to_record: "{{ t.press_to_record }}",
+    microphone_error: "{{ t.microphone_error }}",
+    recorded_audio: "{{ t.recorded_audio }}",
+    mic_permission_needed: "{{ t.mic_permission_needed }}",
+    mic_permission_explanation: "{{ t.mic_permission_explanation }}",
+    enable_mic_instructions: "{{ t.enable_mic_instructions }}",
+    click_lock_icon: "{{ t.click_lock_icon }}"
+};
+
+let slideCount = 1;
+let mediaRecorder;
+let audioChunks = [];
+let currentSlideIndex;
+let recordingStream;
+
+function addSlide() {
+    slideCount++;
+    const container = document.getElementById('slides-container');
+    const newSlide = document.createElement('div');
+    newSlide.className = 'slide-editor mb-4';
+    newSlide.dataset.slide = slideCount - 1;
+    
+    newSlide.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h4>${t.slide} ${slideCount}</h4>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeSlide(this)">
+                ${t.remove_slide}
+            </button>
+        </div>
+        <div class="editor-toolbar mb-2">
+            <div class="btn-group">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertImage(${slideCount - 1})">
+                    <i class="fas fa-image"></i> ${t.insert_image}
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertAudio(${slideCount - 1})">
+                    <i class="fas fa-file-audio"></i> ${t.add_audio}
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="startRecording(${slideCount - 1})">
+                    <i class="fas fa-microphone"></i> ${t.record_audio}
+                </button>
+            </div>
+        </div>
+        <textarea class="form-control slide-content" name="slide_content" rows="6" required></textarea>
+        <input type="file" class="slide-image-input" style="display: none" accept="image/*">
+        <input type="file" class="slide-audio-input" style="display: none" accept="audio/*">
+        <input type="hidden" name="slide_image" class="slide-image-path">
+        <input type="hidden" name="slide_audio" class="slide-audio-path">
+    `;
+    
+    container.appendChild(newSlide);
+}
+
+function removeSlide(button) {
+    button.closest('.slide-editor').remove();
+    updateSlideNumbers();
+}
+
+function updateSlideNumbers() {
+    const slides = document.querySelectorAll('.slide-editor');
+    slides.forEach((slide, index) => {
+        slide.querySelector('h4').textContent = `${t.slide} ${index + 1}`;
+        slide.dataset.slide = index;
+    });
+    slideCount = slides.length;
+}
+
+function insertImage(slideIndex) {
+    const slideEditor = document.querySelector(`.slide-editor[data-slide="${slideIndex}"]`);
+    const input = slideEditor.querySelector('.slide-image-input');
+    input.click();
+}
+
+function insertAudio(slideIndex) {
+    const slideEditor = document.querySelector(`.slide-editor[data-slide="${slideIndex}"]`);
+    const input = slideEditor.querySelector('.slide-audio-input');
+    input.click();
+}
+
+async function requestMicPermission() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop()); // Stop the test stream
+        $('#micPermissionModal').modal('hide');
+        startRecording(currentSlideIndex); // Retry the recording
+    } catch (err) {
+        console.error('Microphone permission denied:', err);
+        // Show browser-specific instructions
+        if (err.name === 'NotAllowedError') {
+            $('#micPermissionModal').modal('show');
+        }
+    }
+}
+
+async function startRecording(slideIndex) {
+    currentSlideIndex = slideIndex;
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        recordingStream = stream;
+        mediaRecorder = new MediaRecorder(stream);
+        
+        mediaRecorder.ondataavailable = (event) => {
+            audioChunks.push(event.data);
+        };
+        
+        mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            document.getElementById('recordingPlayback').src = audioUrl;
+            document.getElementById('recordingPreview').style.display = 'block';
+            document.getElementById('saveRecording').disabled = false;
+            
+            // Close modal and cleanup
+            $('#recordingModal').modal('hide');
+            if (recordingStream) {
+                recordingStream.getTracks().forEach(track => track.stop());
+            }
+        };
+        
+    } catch (err) {
+        console.error('Error accessing microphone:', err);
+        if (err.name === 'NotAllowedError') {
+            $('#micPermissionModal').modal('show');
+        } else {
+            alert(t.microphone_error);
+        }
+    }
+}
+
+async function saveRecording() {
+    if (audioChunks.length === 0) return;
+    
+    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'recording.wav');
+    
+    try {
+        const response = await fetch('/upload_audio', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            const slideEditor = document.querySelector(`.slide-editor[data-slide="${currentSlideIndex}"]`);
+            slideEditor.querySelector('.slide-audio-path').value = data.filename;
+            
+            // Add or update audio preview
+            let preview = slideEditor.querySelector('.audio-preview');
+            if (!preview) {
+                preview = document.createElement('div');
+                preview.className = 'audio-preview mt-2';
+                slideEditor.appendChild(preview);
+            }
+            preview.innerHTML = `
+                <i class="fas fa-music"></i>
+                <span>${t.recorded_audio}</span>
+                <audio controls>
+                    <source src="/static/uploads/${data.filename}" type="audio/wav">
+                </audio>
+            `;
+            
+            // Close modal and cleanup
+            $('#recordingModal').modal('hide');
+            if (recordingStream) {
+                recordingStream.getTracks().forEach(track => track.stop());
+            }
+        }
+    } catch (error) {
+        console.error('Error saving recording:', error);
+    }
+}
+
+// Clean up when modal is closed
+$('#recordingModal').on('hidden.bs.modal', function () {
+    if (recordingStream) {
+        recordingStream.getTracks().forEach(track => track.stop());
+    }
+    document.getElementById('recordingPreview').style.display = 'none';
+    document.getElementById('recordButton').classList.remove('btn-warning');
+    document.getElementById('recordButton').classList.add('btn-danger');
+});
+
+// Add event listener for media uploads
+document.addEventListener('change', async function(e) {
+    if (e.target.classList.contains('slide-image-input')) {
+        const slideEditor = e.target.closest('.slide-editor');
+        const textarea = slideEditor.querySelector('.slide-content');
+        const file = e.target.files[0]; // Only take first file
+        
+        if (file) {
+            const formData = new FormData();
+            formData.append('image', file);
+            
+            try {
+                const response = await fetch('/upload_inline_image', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Remove any existing image
+                    const existingImage = textarea.value.match(/<img[^>]+>/);
+                    if (existingImage) {
+                        textarea.value = textarea.value.replace(existingImage[0], '');
+                    }
+                    
+                    const imageTag = `\n<img src="/static/uploads/${data.filename}" alt="${file.name}" class="lesson-image">\n`;
+                    textarea.value = imageTag + textarea.value;
+                    slideEditor.querySelector('.slide-image-path').value = data.filename;
+                }
+            } catch (error) {
+                console.error('Error uploading image:', error);
+            }
+        }
+    } else if (e.target.classList.contains('slide-audio-input')) {
+        const slideEditor = e.target.closest('.slide-editor');
+        const file = e.target.files[0];
+        
+        if (file) {
+            const formData = new FormData();
+            formData.append('audio', file);
+            
+            try {
+                const response = await fetch('/upload_audio', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    slideEditor.querySelector('.slide-audio-path').value = data.filename;
+                    // Add or update audio preview
+                    let preview = slideEditor.querySelector('.audio-preview');
+                    if (!preview) {
+                        preview = document.createElement('div');
+                        preview.className = 'audio-preview mt-2';
+                        slideEditor.appendChild(preview);
+                    }
+                    preview.innerHTML = `
+                        <i class="fas fa-music"></i>
+                        <span>${file.name}</span>
+                        <audio controls>
+                            <source src="/static/uploads/${data.filename}" type="${file.type}">
+                        </audio>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error uploading audio:', error);
+            }
+        }
+    }
+});
+
+document.getElementById('hasQuiz').addEventListener('change', function() {
+    document.getElementById('quizSection').style.display = this.checked ? 'block' : 'none';
+});
+
+let questionCount = 1;
+
+function addQuestion() {
+    questionCount++;
+    const container = document.getElementById('questionContainer');
+    const questionBlock = document.createElement('div');
+    questionBlock.className = 'question-block mb-4';
+    questionBlock.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <label>{{ t.question }} ${questionCount}</label>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeQuestion(this)">
+                {{ t.remove_question }}
+            </button>
+        </div>
+        <div class="form-group">
+            <input type="text" class="form-control" name="quiz_questions[]" required>
+        </div>
+        <div class="form-group">
+            <label>{{ t.answer }}</label>
+            <input type="text" class="form-control" name="quiz_answers[]" required>
+        </div>
+    `;
+    container.appendChild(questionBlock);
+}
+
+function removeQuestion(button) {
+    button.closest('.question-block').remove();
+    updateQuestionNumbers();
+}
+
+function updateQuestionNumbers() {
+    const questions = document.querySelectorAll('.question-block');
+    questions.forEach((question, index) => {
+        const label = question.querySelector('label');
+        if (label) {
+            label.textContent = `{{ t.question }} ${index + 1}`;
+        }
+    });
+    questionCount = questions.length;
+}
+</script>
+{% endblock %}
