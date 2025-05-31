@@ -1,0 +1,8 @@
+Flask
+gunicorn
+pymongo
+passlib
+qrcode
+flask_socketio
+bson
+werkzeug 
