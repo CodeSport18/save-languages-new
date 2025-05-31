@@ -5,4 +5,5 @@ passlib
 qrcode
 flask_socketio
 bson
-werkzeug 
+werkzeug
+eventlet 
