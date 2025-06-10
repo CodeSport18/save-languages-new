@@ -17,23 +17,38 @@ password=''
 secret_key=''
 file=open('secret_key.txt','r')
 for n in file:
-    secret_key = n
+    secret_key = n.strip()
 file.close()
 file=open('password.txt','r')
 for n in file:
-    password = n
+    password = n.strip()
 file.close()
+
+# Debug: Print masked connection string
+if password:
+    masked_conn = password.replace(password.split('@')[0], '*****')
+    print(f"Attempting to connect with connection string: {masked_conn}")
+else:
+    print("Error: Empty connection string in password.txt")
 
 loggedIn = False
 app = Flask(__name__)
 socketio = SocketIO(app)
 app.secret_key = secret_key
 
-client = pymongo.MongoClient(
-    password,
-    tlsAllowInvalidCertificates=True
-)
-db = client.koshur
+try:
+    client = pymongo.MongoClient(
+        password,
+        tlsAllowInvalidCertificates=True,
+        serverSelectionTimeoutMS=5000  # 5 second timeout
+    )
+    # Test the connection
+    client.admin.command('ping')
+    db = client.koshur
+    print("Successfully connected to MongoDB!")
+except Exception as e:
+    print(f"Error connecting to MongoDB: {str(e)}")
+    raise
 
 # Add these configurations after app initialization
 UPLOAD_FOLDER = 'static/uploads'

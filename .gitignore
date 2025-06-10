@@ -1,3 +1,7 @@
+# Sensitive files
+password.txt
+secret_key.txt
+
 # Python
 __pycache__/
 *.py[cod]
@@ -45,6 +49,11 @@ ENV/
 instance/
 .webassets-cache
 
-# Secret files
-secret_key.txt
-password.txt 
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db 
