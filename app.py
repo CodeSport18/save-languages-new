@@ -13,23 +13,12 @@ from translations import translations
 
 ip_current = '192.168.1.112:5001'
 
-password=''
-secret_key=''
-file=open('secret_key.txt','r')
-for n in file:
-    secret_key = n.strip()
-file.close()
-file=open('password.txt','r')
-for n in file:
-    password = n.strip()
-file.close()
+# Get environment variables
+password = os.environ.get('MONGODB_URI')
+secret_key = os.environ.get('SECRET_KEY')
 
-# Debug: Print masked connection string
-if password:
-    masked_conn = password.replace(password.split('@')[0], '*****')
-    print(f"Attempting to connect with connection string: {masked_conn}")
-else:
-    print("Error: Empty connection string in password.txt")
+if not password or not secret_key:
+    raise ValueError("MONGODB_URI and SECRET_KEY environment variables must be set")
 
 loggedIn = False
 app = Flask(__name__)
