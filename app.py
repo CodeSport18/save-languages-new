@@ -8,8 +8,13 @@ from flask_socketio import SocketIO,emit
 import string
 from bson import ObjectId
 import os
+import logging
 from werkzeug.utils import secure_filename
 from translations import translations
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 ip_current = '192.168.1.112:5001'
 
@@ -18,6 +23,7 @@ password = os.environ.get('MONGODB_URI')
 secret_key = os.environ.get('SECRET_KEY')
 
 if not password or not secret_key:
+    logger.error("Missing required environment variables")
     raise ValueError("MONGODB_URI and SECRET_KEY environment variables must be set")
 
 loggedIn = False
@@ -26,6 +32,7 @@ socketio = SocketIO(app)
 app.secret_key = secret_key
 
 try:
+    logger.info("Attempting to connect to MongoDB...")
     client = pymongo.MongoClient(
         password,
         tlsAllowInvalidCertificates=True,
@@ -34,9 +41,9 @@ try:
     # Test the connection
     client.admin.command('ping')
     db = client.koshur
-    print("Successfully connected to MongoDB!")
+    logger.info("Successfully connected to MongoDB!")
 except Exception as e:
-    print(f"Error connecting to MongoDB: {str(e)}")
+    logger.error(f"Error connecting to MongoDB: {str(e)}")
     raise
 
 # Add these configurations after app initialization
