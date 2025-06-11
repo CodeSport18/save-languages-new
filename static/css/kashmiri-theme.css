@@ -1,0 +1,162 @@
+/* Kashmiri Theme Styles */
+
+:root {
+  --kashmiri-red: #8B0000;
+  --kashmiri-gold: #DAA520;
+  --kashmiri-green: #006400;
+  --kashmiri-blue: #00008B;
+  --kashmiri-cream: #FFF8DC;
+}
+
+body {
+  background-color: var(--kashmiri-cream);
+  font-family: 'Noto Sans', sans-serif;
+}
+
+.navbar {
+  background-color: var(--kashmiri-red) !important;
+  border-bottom: 3px solid var(--kashmiri-gold);
+}
+
+.navbar-brand, .nav-link {
+  color: var(--kashmiri-cream) !important;
+}
+
+.nav-link:hover {
+  color: var(--kashmiri-gold) !important;
+}
+
+.btn-primary {
+  background-color: var(--kashmiri-red);
+  border-color: var(--kashmiri-gold);
+}
+
+.btn-primary:hover {
+  background-color: var(--kashmiri-gold);
+  border-color: var(--kashmiri-red);
+  color: var(--kashmiri-red);
+}
+
+.card {
+  border: 2px solid var(--kashmiri-gold);
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  background-color: var(--kashmiri-red);
+  color: var(--kashmiri-cream);
+  border-bottom: 2px solid var(--kashmiri-gold);
+}
+
+/* Kashmiri Pattern Background */
+.kashmiri-pattern {
+  background-image: url('/static/images/kashmiri-pattern.png');
+  background-repeat: repeat;
+  opacity: 0.1;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
+
+/* Kashmiri Calligraphy Font */
+@font-face {
+  font-family: 'KashmiriCalligraphy';
+  src: url('/static/fonts/KashmiriCalligraphy.woff2') format('woff2');
+}
+
+.kashmiri-title {
+  font-family: 'KashmiriCalligraphy', serif;
+  color: var(--kashmiri-red);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Kashmiri Decorative Elements */
+.decorative-border {
+  border: 2px solid var(--kashmiri-gold);
+  border-radius: 15px;
+  padding: 20px;
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Kashmiri Button Styles */
+.kashmiri-btn {
+  background-color: var(--kashmiri-red);
+  color: var(--kashmiri-cream);
+  border: 2px solid var(--kashmiri-gold);
+  border-radius: 5px;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+}
+
+.kashmiri-btn:hover {
+  background-color: var(--kashmiri-gold);
+  color: var(--kashmiri-red);
+  transform: translateY(-2px);
+}
+
+/* Kashmiri Alert Styles */
+.alert-kashmiri {
+  background-color: var(--kashmiri-cream);
+  border: 2px solid var(--kashmiri-gold);
+  color: var(--kashmiri-red);
+  border-radius: 10px;
+}
+
+/* Kashmiri Form Styles */
+.form-control:focus {
+  border-color: var(--kashmiri-gold);
+  box-shadow: 0 0 0 0.2rem rgba(218, 165, 32, 0.25);
+}
+
+/* Kashmiri Progress Bar */
+.progress {
+  background-color: var(--kashmiri-cream);
+  border: 1px solid var(--kashmiri-gold);
+}
+
+.progress-bar {
+  background-color: var(--kashmiri-red);
+}
+
+/* Kashmiri Modal Styles */
+.modal-content {
+  border: 3px solid var(--kashmiri-gold);
+  border-radius: 15px;
+}
+
+.modal-header {
+  background-color: var(--kashmiri-red);
+  color: var(--kashmiri-cream);
+  border-bottom: 2px solid var(--kashmiri-gold);
+}
+
+/* Kashmiri Table Styles */
+.table {
+  border: 1px solid var(--kashmiri-gold);
+}
+
+.table thead th {
+  background-color: var(--kashmiri-red);
+  color: var(--kashmiri-cream);
+  border-bottom: 2px solid var(--kashmiri-gold);
+}
+
+/* Kashmiri Pagination */
+.pagination .page-item.active .page-link {
+  background-color: var(--kashmiri-red);
+  border-color: var(--kashmiri-gold);
+}
+
+.pagination .page-link {
+  color: var(--kashmiri-red);
+}
+
+.pagination .page-link:hover {
+  background-color: var(--kashmiri-gold);
+  color: var(--kashmiri-red);
+} 

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h2>{{ quiz.title }}</h2>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+    {% for question in quiz.questions %}
+                    <div class="mb-4">
+                        <h5>{{ t.question }} {{ loop.index }}:</h5>
+                        <p>{{ question }}</p>
+                        <input type="text" name="answers" class="form-control" required>
+      </div>
+    {% endfor %}
+                <button type="submit" class="btn btn-primary">{{ t.submit_quiz }}</button>
+                <a href="{{ url_for('view_quizzes') }}" class="btn btn-secondary">{{ t.back_to_quizzes }}</a>
+  </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

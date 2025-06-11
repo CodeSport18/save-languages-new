@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ t.my_app }}{% endblock %}
+{% block content %}
+  <div class="jumbotron text-center">
+    <h1 class="display-4">{{ t.my_app }}</h1>
+    <p class="lead">Learn Kashmiri language through interactive lessons and quizzes.</p>
+    <hr class="my-4">
+    <p>Get started by logging in or registering an account.</p>
+    <div class="mt-4">
+      {% if not session.user_id %}
+        <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg mr-2">{{ t.login }}</a>
+        <a href="{{ url_for('register') }}" class="btn btn-outline-primary btn-lg">{{ t.register }}</a>
+      {% else %}
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg">{{ t.dashboard }}</a>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

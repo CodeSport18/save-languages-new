@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ t.my_app }}{% endblock %}</title>
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/kashmiri-theme.css') }}" rel="stylesheet">
+  <style>
+    /* Kashmiri Theme Colors */
+    :root {
+      --kashmiri-primary: #2c3e50;
+      --kashmiri-secondary: #34495e;
+      --kashmiri-accent: #e74c3c;
+      --kashmiri-light: #ecf0f1;
+      --kashmiri-dark: #2c3e50;
+    }
+
+    body {
+      background-color: var(--kashmiri-light);
+      font-family: 'Noto Sans', sans-serif;
+    }
+
+    .navbar {
+      background-color: var(--kashmiri-primary);
+    }
+
+    .navbar-dark .navbar-nav .nav-link {
+      color: var(--kashmiri-light);
+    }
+
+    .btn-primary {
+      background-color: var(--kashmiri-accent);
+      border-color: var(--kashmiri-accent);
+    }
+
+    .btn-primary:hover {
+      background-color: #c0392b;
+      border-color: #c0392b;
+    }
+
+    .alert-kashmiri {
+      background-color: var(--kashmiri-accent);
+      color: white;
+      border-color: var(--kashmiri-accent);
+    }
+
+    .kashmiri-title {
+      color: var(--kashmiri-light) !important;
+      font-weight: bold;
+    }
+
+    /* Fireworks Animation */
+    .pyro {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 9999;
+      pointer-events: none;
+      display: none;
+    }
+    .pyro.show {
+      display: block;
+    }
+    .pyro > .before, .pyro > .after {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      box-shadow: 
+          /* Original top-half fireworks - spread wider */
+          -240px -218.66667px blue, 496px -16.66667px #00ff84,
+          380px 16.33333px #002bff, -226px -308.66667px #ff009d,
+          -218px -287.66667px #ffb300, -100px -313.66667px #ff006e,
+          452px -31.66667px #ff4000, 360px -351.66667px #ff00d0,
+          -24px -338.66667px #00f6ff, 440px -388.66667px #99ff00,
+          -138px -27.66667px #ff0400, -222px -339.66667px #6200ff,
+          310px -237.66667px #00ddff, -304px -380.66667px #00ffd0,
+          -100px -37.66667px #00ffdd, -190px -175.66667px #a6ff00,
+          -176px 10.33333px #0d00ff, 224px -309.66667px #005eff,
+          138px -415.66667px #ff00a6, 336px -100.66667px #ff004c,
+          -488px 24.33333px #ff6600, 194px -325.66667px #ff0066,
+          /* Mirror for bottom-half fireworks - spread wider */
+          -240px 218.66667px blue, 496px 16.66667px #00ff84,
+          380px -16.33333px #002bff, -226px 308.66667px #ff009d,
+          -218px 287.66667px #ffb300, -100px 313.66667px #ff006e,
+          452px 31.66667px #ff4000, 360px 351.66667px #ff00d0,
+          -24px 338.66667px #00f6ff, 440px 388.66667px #99ff00,
+          -138px 27.66667px #ff0400, -222px 339.66667px #6200ff,
+          310px 237.66667px #00ddff, -304px 380.66667px #00ffd0,
+          -100px 37.66667px #00ffdd, -190px 175.66667px #a6ff00,
+          -176px -10.33333px #0d00ff, 224px 309.66667px #005eff,
+          138px 415.66667px #ff00a6, 336px 100.66667px #ff004c,
+          -488px -24.33333px #ff6600, 194px 325.66667px #ff0066;
+      animation: 1s bang ease-out infinite backwards, 
+                1s gravity ease-in infinite backwards, 
+                5s position linear infinite backwards;
+    }
+    .pyro > .after {
+      animation-delay: 1.25s, 1.25s, 1.25s;
+      animation-duration: 1.25s, 1.25s, 6.25s;
+    }
+
+    /* Add a second layer of fireworks */
+    .pyro > .before::after, .pyro > .after::after {
+      content: "";
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      animation: 1.2s bang ease-out infinite backwards,
+                1.2s gravity ease-in infinite backwards,
+                5.5s position linear infinite backwards;
+    }
+
+    /* Add a third layer of fireworks */
+    .pyro > .before::before, .pyro > .after::before {
+      content: "";
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      animation: 2s bang ease-out infinite backwards,
+                2s gravity ease-in infinite backwards,
+                7s position linear infinite backwards;
+    }
+
+    /* Update position animation to move fireworks across entire screen */
+    @keyframes position {
+      0%, 19.9% { margin-top: 5%; margin-left: 40%; }
+      20%, 39.9% { margin-top: 15%; margin-left: 30%; }
+      40%, 59.9% { margin-top: 10%; margin-left: 70%; }
+      60%, 79.9% { margin-top: 5%; margin-left: 20%; }
+      80%, 99.9% { margin-top: 10%; margin-left: 80%; }
+    }
+
+    /* Update bang animation to match initial box-shadow */
+    @keyframes bang {
+      to {
+        box-shadow: 
+            /* Original top-half fireworks - spread wider */
+            -240px -218.66667px blue, 496px -16.66667px #00ff84,
+            380px 16.33333px #002bff, -226px -308.66667px #ff009d,
+            -218px -287.66667px #ffb300, -100px -313.66667px #ff006e,
+            452px -31.66667px #ff4000, 360px -351.66667px #ff00d0,
+            -24px -338.66667px #00f6ff, 440px -388.66667px #99ff00,
+            -138px -27.66667px #ff0400, -222px -339.66667px #6200ff,
+            310px -237.66667px #00ddff, -304px -380.66667px #00ffd0,
+            -100px -37.66667px #00ffdd, -190px -175.66667px #a6ff00,
+            -176px 10.33333px #0d00ff, 224px -309.66667px #005eff,
+            138px -415.66667px #ff00a6, 336px -100.66667px #ff004c,
+            -488px 24.33333px #ff6600, 194px -325.66667px #ff0066,
+            /* Mirror for bottom-half fireworks - spread wider */
+            -240px 218.66667px blue, 496px 16.66667px #00ff84,
+            380px -16.33333px #002bff, -226px 308.66667px #ff009d,
+            -218px 287.66667px #ffb300, -100px 313.66667px #ff006e,
+            452px 31.66667px #ff4000, 360px 351.66667px #ff00d0,
+            -24px 338.66667px #00f6ff, 440px 388.66667px #99ff00,
+            -138px 27.66667px #ff0400, -222px 339.66667px #6200ff,
+            310px 237.66667px #00ddff, -304px 380.66667px #00ffd0,
+            -100px 37.66667px #00ffdd, -190px 175.66667px #a6ff00,
+            -176px -10.33333px #0d00ff, 224px 309.66667px #005eff,
+            138px 415.66667px #ff00a6, 336px 100.66667px #ff004c,
+            -488px -24.33333px #ff6600, 194px 325.66667px #ff0066;
+      }
+    }
+
+    /* Update just the gravity animation */
+    @keyframes gravity {
+      to {
+        transform: translateY(200px);
+        opacity: 0;
+      }
+    }
+
+    /* Add fade-out animation */
+    @keyframes fadeOut {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    .pyro.ending {
+      animation: fadeOut 2s ease-out forwards;
+    }
+
+    /* Footer Styling */
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .content {
+      flex: 1 0 auto;
+      padding-bottom: 60px; /* Space for footer */
+    }
+    .footer {
+      flex-shrink: 0;
+      background-color: var(--kashmiri-primary);
+      color: var(--kashmiri-light);
+      padding: 1rem 0;
+      position: relative;
+      bottom: 0;
+      width: 100%;
+    }
+  </style>
+  <!-- Optional JavaScript -->
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+</head>
+<body>
+  <div class="kashmiri-pattern"></div>
+
+  <!-- Fireworks container -->
+  <div class="pyro">
+    <div class="before"></div>
+    <div class="after"></div>
+  </div>
+
+  <!-- Liberty Bell sound -->
+  <audio id="libertyBell" src="https://upload.wikimedia.org/wikipedia/commons/8/87/Liberty_Bell_ringing.ogg"></audio>
+
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+      <a class="navbar-brand kashmiri-title" href="/">{{ t.my_app }}</a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav mr-auto">
+          <li class="nav-item"><a class="nav-link" href="/dashboard">{{ t.dashboard }}</a></li>
+          {% if session.user_id and session.is_admin %}
+            <li class="nav-item"><a class="nav-link" href="/create_lesson">{{ t.create_lesson }}</a></li>
+            <li class="nav-item"><a class="nav-link" href="/create_quiz">{{ t.create_quiz }}</a></li>
+          {% endif %}
+        </ul>
+        <ul class="navbar-nav mr-2">
+          {% if session.user_id %}
+            <li class="nav-item"><a class="nav-link" href="/logout">{{ t.logout }}</a></li>
+          {% else %}
+            <li class="nav-item"><a class="nav-link" href="/login">{{ t.login }}</a></li>
+            <li class="nav-item"><a class="nav-link" href="/register">{{ t.register }}</a></li>
+          {% endif %}
+        </ul>
+        <!-- Language Selector -->
+        <div class="nav-item dropdown">
+          <a class="btn btn-outline-light dropdown-toggle" href="#" role="button" id="languageDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            {% if g.locale == 'en' %}
+              🇺🇸 English
+            {% elif g.locale == 'de' %}
+              🇩🇪 Deutsch
+            {% elif g.locale == 'es' %}
+              🇺🇸 Español
+            {% elif g.locale == 'hi' %}
+              🇮🇳 हिंदी
+            {% elif g.locale == 'fr' %}
+              🇫🇷 Français
+            {% elif g.locale == 'it' %}
+              🇮🇹 Italiano
+            {% elif g.locale == 'ja' %}
+              🇯🇵 日本語
+            {% else %}
+              🇺🇸 English
+            {% endif %}
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="languageDropdown">
+            <a class="dropdown-item" href="{{ url_for('change_language', language='en') }}">🇺🇸 English</a>
+            <a class="dropdown-item" href="{{ url_for('change_language', language='de') }}">🇩🇪 Deutsch</a>
+            <a class="dropdown-item" href="{{ url_for('change_language', language='es') }}">🇺🇸 Español</a>
+            <a class="dropdown-item" href="{{ url_for('change_language', language='hi') }}">🇮🇳 हिंदी</a>
+            <a class="dropdown-item" href="{{ url_for('change_language', language='fr') }}">🇫🇷 Français</a>
+            <a class="dropdown-item" href="{{ url_for('change_language', language='it') }}">🇮🇹 Italiano</a>
+            <a class="dropdown-item" href="{{ url_for('change_language', language='ja') }}">🇯🇵 日本語</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="content container mt-4">
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Main content -->
+    {% block content %}{% endblock %}
+  </div>
+
+  <footer class="footer mt-auto py-3">
+    <div class="container text-center">
+      <span>&copy; 2024 {{ t.my_app }}. All rights reserved.</span>
+    </div>
+  </footer>
+
+  <script>
+    // Show fireworks on successful actions
+    function showFireworks() {
+      const pyro = document.querySelector('.pyro');
+      const libertyBell = document.getElementById('libertyBell');
+      
+      pyro.classList.add('show');
+      libertyBell.play();
+      
+      setTimeout(() => {
+        pyro.classList.add('ending');
+        setTimeout(() => {
+          pyro.classList.remove('show', 'ending');
+        }, 2000);
+      }, 5000);
+    }
+
+    // Add fireworks to success messages
+    document.addEventListener('DOMContentLoaded', function() {
+      const successAlerts = document.querySelectorAll('.alert-success');
+      successAlerts.forEach(alert => {
+        showFireworks();
+      });
+    });
+  </script>
+</body>
+</html>

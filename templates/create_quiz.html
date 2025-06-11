@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Create Quiz{% endblock %}
+{% block content %}
+  <h2>Create Quiz</h2>
+  <form method="post" action="/create_quiz" id="quizForm">
+    <div class="form-group">
+      <label for="quiz_title">Quiz Title</label>
+      <input type="text" class="form-control" name="quiz_title" id="quiz_title" required>
+    </div>
+    <div id="qa_pairs">
+      <div class="form-group">
+        <label>Question 1</label>
+        <input type="text" class="form-control" name="questions" required>
+      </div>
+      <div class="form-group">
+        <label>Answer 1</label>
+        <input type="text" class="form-control" name="answers" required>
+      </div>
+    </div>
+    <button type="button" class="btn btn-secondary mb-3" onclick="addQA()">Add Another Question</button>
+    <br>
+    <button type="submit" class="btn btn-success">Create Quiz</button>
+  </form>
+
+  <script>
+    let questionCount = 1;
+    function addQA() {
+      questionCount++;
+      const qaDiv = document.getElementById('qa_pairs');
+      
+      const questionDiv = document.createElement('div');
+      questionDiv.className = "form-group";
+      questionDiv.innerHTML = `<label>Question ${questionCount}</label>
+                               <input type="text" class="form-control" name="questions" required>`;
+      qaDiv.appendChild(questionDiv);
+      
+      const answerDiv = document.createElement('div');
+      answerDiv.className = "form-group";
+      answerDiv.innerHTML = `<label>Answer ${questionCount}</label>
+                             <input type="text" class="form-control" name="answers" required>`;
+      qaDiv.appendChild(answerDiv);
+    }
+  </script>
+{% endblock %}
