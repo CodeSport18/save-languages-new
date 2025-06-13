@@ -2,6 +2,9 @@
 password.txt
 secret_key.txt
 
+# Competitive Coding
+competitive_coding.py
+
 # Python
 __pycache__/
 *.py[cod]
