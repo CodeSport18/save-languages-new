@@ -1,10 +1,19 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, g
+from flask import Flask, render_template, request, redirect, url_for, session, flash, g, abort
 from functools import wraps
 import os
 from translations import translations
+from bson.objectid import ObjectId
+from pymongo import MongoClient
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', '!hUcAZCNrL-HM&-')
+
+# MongoDB connection
+with open('password.txt') as f:
+    mongo_uri = f.read().strip()
+client = MongoClient(mongo_uri)
+db = client['koshur']
+lessons_collection = db['lessons']
 
 # User database (in-memory for simplicity)
 users = {}
@@ -22,12 +31,24 @@ def before_request():
     # Set default locale to English if not set
     if 'locale' not in session:
         session['locale'] = 'en'
-    g.locale = session['locale']
+    
+    # Get the current locale
+    g.locale = session.get('locale', 'en')
+    
+    # Ensure the locale exists in translations
+    if g.locale not in translations:
+        g.locale = 'en'
+    
+    # Make translations available to all templates
     g.t = translations[g.locale]
+
+@app.context_processor
+def inject_translations():
+    return {'t': g.t}
 
 @app.route('/')
 def homepage():
-    return render_template('main.html', t=g.t)
+    return render_template('main.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -40,7 +61,7 @@ def login():
             flash('Successfully logged in!', 'success')
             return redirect(url_for('dashboard'))
         flash('Invalid username or password', 'error')
-    return render_template('login.html', t=g.t)
+    return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -53,7 +74,7 @@ def register():
             users[username] = {'password': password, 'is_admin': False}
             flash('Registration successful! Please login.', 'success')
             return redirect(url_for('login'))
-    return render_template('register.html', t=g.t)
+    return render_template('register.html')
 
 @app.route('/logout')
 def logout():
@@ -64,17 +85,24 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    return render_template('dashboard.html', t=g.t)
+    return render_template('dashboard.html')
 
 @app.route('/lessons')
 @login_required
 def lessons():
-    return render_template('lessons.html', t=g.t)
+    lessons = list(lessons_collection.find())
+    return render_template('lessons.html', lessons=lessons)
 
-@app.route('/lesson/<int:lesson_id>')
+@app.route('/lesson/<lesson_id>')
 @login_required
 def lesson_detail(lesson_id):
-    return render_template('lesson_detail.html', t=g.t)
+    try:
+        lesson = lessons_collection.find_one({'_id': ObjectId(lesson_id)})
+    except Exception:
+        lesson = None
+    if not lesson:
+        abort(404)
+    return render_template('lesson_detail.html', lesson=lesson)
 
 @app.route('/create_lesson')
 @login_required
@@ -82,12 +110,12 @@ def create_lesson():
     if not session.get('is_admin'):
         flash('Access denied', 'error')
         return redirect(url_for('dashboard'))
-    return render_template('create_lesson.html', t=g.t)
+    return render_template('create_lesson.html')
 
 @app.route('/quizzes')
 @login_required
 def quizzes():
-    return render_template('quizzes.html', t=g.t)
+    return render_template('quizzes.html')
 
 @app.route('/create_quiz')
 @login_required
@@ -95,22 +123,22 @@ def create_quiz():
     if not session.get('is_admin'):
         flash('Access denied', 'error')
         return redirect(url_for('dashboard'))
-    return render_template('create_quiz.html', t=g.t)
+    return render_template('create_quiz.html')
 
 @app.route('/take_quiz/<int:quiz_id>')
 @login_required
 def take_quiz(quiz_id):
-    return render_template('take_quiz.html', t=g.t)
+    return render_template('take_quiz.html')
 
 @app.route('/lesson_history')
 @login_required
 def lesson_history():
-    return render_template('lesson_history.html', t=g.t)
+    return render_template('lesson_history.html')
 
 @app.route('/quiz_history')
 @login_required
 def quiz_history():
-    return render_template('quiz_history.html', t=g.t)
+    return render_template('quiz_history.html')
 
 @app.route('/change_language/<language>')
 def change_language(language):

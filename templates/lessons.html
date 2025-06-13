@@ -21,7 +21,7 @@
                             <h5 class="card-title">{{ lesson.title }}</h5>
                             <p class="card-text text-muted">Created on: {{ lesson.date_created.strftime('%B %d, %Y') }}</p>
                             <div class="d-flex justify-content-between">
-                                <a href="{{ url_for('view_lesson', lesson_id=lesson._id) }}" class="btn btn-primary">Start Lesson</a>
+                                <a href="{{ url_for('lesson_detail', lesson_id=lesson._id) }}" class="btn btn-primary">Start Lesson</a>
                                 {% if session.get('is_admin') %}
                                     <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteModal" data-lesson-id="{{ lesson._id }}" data-lesson-title="{{ lesson.title }}">
                                         Delete Lesson
