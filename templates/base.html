@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/kashmiri-theme.css') }}" rel="stylesheet">
+  <!-- Add Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
   <style>
     /* Kashmiri Theme Colors */
     :root {
@@ -236,8 +238,16 @@
         <ul class="navbar-nav mr-auto">
           <li class="nav-item"><a class="nav-link" href="/dashboard">{{ t.dashboard }}</a></li>
           {% if session.user_id and session.is_admin %}
-            <li class="nav-item"><a class="nav-link" href="/create_lesson">{{ t.create_lesson }}</a></li>
-            <li class="nav-item"><a class="nav-link" href="/create_quiz">{{ t.create_quiz }}</a></li>
+            <li class="nav-item font-weight-bold">
+              <a class="nav-link text-warning" href="/create_lesson">
+                <i class="fas fa-plus-circle"></i> {{ t.create_lesson }}
+              </a>
+            </li>
+            <li class="nav-item font-weight-bold">
+              <a class="nav-link text-warning" href="/create_quiz">
+                <i class="fas fa-plus-circle"></i> {{ t.create_quiz }}
+              </a>
+            </li>
           {% endif %}
         </ul>
         <ul class="navbar-nav mr-2">
