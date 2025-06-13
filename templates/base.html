@@ -54,139 +54,6 @@
       font-weight: bold;
     }
 
-    /* Fireworks Animation */
-    .pyro {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 9999;
-      pointer-events: none;
-      display: none;
-    }
-    .pyro.show {
-      display: block;
-    }
-    .pyro > .before, .pyro > .after {
-      position: absolute;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      box-shadow: 
-          /* Original top-half fireworks - spread wider */
-          -240px -218.66667px blue, 496px -16.66667px #00ff84,
-          380px 16.33333px #002bff, -226px -308.66667px #ff009d,
-          -218px -287.66667px #ffb300, -100px -313.66667px #ff006e,
-          452px -31.66667px #ff4000, 360px -351.66667px #ff00d0,
-          -24px -338.66667px #00f6ff, 440px -388.66667px #99ff00,
-          -138px -27.66667px #ff0400, -222px -339.66667px #6200ff,
-          310px -237.66667px #00ddff, -304px -380.66667px #00ffd0,
-          -100px -37.66667px #00ffdd, -190px -175.66667px #a6ff00,
-          -176px 10.33333px #0d00ff, 224px -309.66667px #005eff,
-          138px -415.66667px #ff00a6, 336px -100.66667px #ff004c,
-          -488px 24.33333px #ff6600, 194px -325.66667px #ff0066,
-          /* Mirror for bottom-half fireworks - spread wider */
-          -240px 218.66667px blue, 496px 16.66667px #00ff84,
-          380px -16.33333px #002bff, -226px 308.66667px #ff009d,
-          -218px 287.66667px #ffb300, -100px 313.66667px #ff006e,
-          452px 31.66667px #ff4000, 360px 351.66667px #ff00d0,
-          -24px 338.66667px #00f6ff, 440px 388.66667px #99ff00,
-          -138px 27.66667px #ff0400, -222px 339.66667px #6200ff,
-          310px 237.66667px #00ddff, -304px 380.66667px #00ffd0,
-          -100px 37.66667px #00ffdd, -190px 175.66667px #a6ff00,
-          -176px -10.33333px #0d00ff, 224px 309.66667px #005eff,
-          138px 415.66667px #ff00a6, 336px 100.66667px #ff004c,
-          -488px -24.33333px #ff6600, 194px 325.66667px #ff0066;
-      animation: 1s bang ease-out infinite backwards, 
-                1s gravity ease-in infinite backwards, 
-                5s position linear infinite backwards;
-    }
-    .pyro > .after {
-      animation-delay: 1.25s, 1.25s, 1.25s;
-      animation-duration: 1.25s, 1.25s, 6.25s;
-    }
-
-    /* Add a second layer of fireworks */
-    .pyro > .before::after, .pyro > .after::after {
-      content: "";
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      animation: 1.2s bang ease-out infinite backwards,
-                1.2s gravity ease-in infinite backwards,
-                5.5s position linear infinite backwards;
-    }
-
-    /* Add a third layer of fireworks */
-    .pyro > .before::before, .pyro > .after::before {
-      content: "";
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      animation: 2s bang ease-out infinite backwards,
-                2s gravity ease-in infinite backwards,
-                7s position linear infinite backwards;
-    }
-
-    /* Update position animation to move fireworks across entire screen */
-    @keyframes position {
-      0%, 19.9% { margin-top: 5%; margin-left: 40%; }
-      20%, 39.9% { margin-top: 15%; margin-left: 30%; }
-      40%, 59.9% { margin-top: 10%; margin-left: 70%; }
-      60%, 79.9% { margin-top: 5%; margin-left: 20%; }
-      80%, 99.9% { margin-top: 10%; margin-left: 80%; }
-    }
-
-    /* Update bang animation to match initial box-shadow */
-    @keyframes bang {
-      to {
-        box-shadow: 
-            /* Original top-half fireworks - spread wider */
-            -240px -218.66667px blue, 496px -16.66667px #00ff84,
-            380px 16.33333px #002bff, -226px -308.66667px #ff009d,
-            -218px -287.66667px #ffb300, -100px -313.66667px #ff006e,
-            452px -31.66667px #ff4000, 360px -351.66667px #ff00d0,
-            -24px -338.66667px #00f6ff, 440px -388.66667px #99ff00,
-            -138px -27.66667px #ff0400, -222px -339.66667px #6200ff,
-            310px -237.66667px #00ddff, -304px -380.66667px #00ffd0,
-            -100px -37.66667px #00ffdd, -190px -175.66667px #a6ff00,
-            -176px 10.33333px #0d00ff, 224px -309.66667px #005eff,
-            138px -415.66667px #ff00a6, 336px -100.66667px #ff004c,
-            -488px 24.33333px #ff6600, 194px -325.66667px #ff0066,
-            /* Mirror for bottom-half fireworks - spread wider */
-            -240px 218.66667px blue, 496px 16.66667px #00ff84,
-            380px -16.33333px #002bff, -226px 308.66667px #ff009d,
-            -218px 287.66667px #ffb300, -100px 313.66667px #ff006e,
-            452px 31.66667px #ff4000, 360px 351.66667px #ff00d0,
-            -24px 338.66667px #00f6ff, 440px 388.66667px #99ff00,
-            -138px 27.66667px #ff0400, -222px 339.66667px #6200ff,
-            310px 237.66667px #00ddff, -304px 380.66667px #00ffd0,
-            -100px 37.66667px #00ffdd, -190px 175.66667px #a6ff00,
-            -176px -10.33333px #0d00ff, 224px 309.66667px #005eff,
-            138px 415.66667px #ff00a6, 336px 100.66667px #ff004c,
-            -488px -24.33333px #ff6600, 194px 325.66667px #ff0066;
-      }
-    }
-
-    /* Update just the gravity animation */
-    @keyframes gravity {
-      to {
-        transform: translateY(200px);
-        opacity: 0;
-      }
-    }
-
-    /* Add fade-out animation */
-    @keyframes fadeOut {
-      0% { opacity: 1; }
-      100% { opacity: 0; }
-    }
-
-    .pyro.ending {
-      animation: fadeOut 2s ease-out forwards;
-    }
-
     /* Footer Styling */
     html, body {
       height: 100%;
@@ -219,14 +86,14 @@
 <body>
   <div class="kashmiri-pattern"></div>
 
-  <!-- Fireworks container -->
-  <div class="pyro">
+  <!-- Fireworks container removed -->
+  <!-- <div class="pyro">
     <div class="before"></div>
     <div class="after"></div>
-  </div>
+  </div> -->
 
-  <!-- Liberty Bell sound -->
-  <audio id="libertyBell" src="https://upload.wikimedia.org/wikipedia/commons/8/87/Liberty_Bell_ringing.ogg"></audio>
+  <!-- Liberty Bell sound removed -->
+  <!-- <audio id="libertyBell" src="https://upload.wikimedia.org/wikipedia/commons/8/87/Liberty_Bell_ringing.ogg"></audio> -->
 
   <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
@@ -314,34 +181,8 @@
 
   <footer class="footer mt-auto py-3">
     <div class="container text-center">
-      <span>&copy; 2024 {{ t.my_app }}. All rights reserved.</span>
+      <span>&copy; 2025 {{ t.my_app }}. All rights reserved.</span>
     </div>
   </footer>
-
-  <script>
-    // Show fireworks on successful actions
-    function showFireworks() {
-      const pyro = document.querySelector('.pyro');
-      const libertyBell = document.getElementById('libertyBell');
-      
-      pyro.classList.add('show');
-      libertyBell.play();
-      
-      setTimeout(() => {
-        pyro.classList.add('ending');
-        setTimeout(() => {
-          pyro.classList.remove('show', 'ending');
-        }, 2000);
-      }, 5000);
-    }
-
-    // Add fireworks to success messages
-    document.addEventListener('DOMContentLoaded', function() {
-      const successAlerts = document.querySelectorAll('.alert-success');
-      successAlerts.forEach(alert => {
-        showFireworks();
-      });
-    });
-  </script>
 </body>
 </html>

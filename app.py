@@ -61,9 +61,9 @@ def login():
             password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
             if user.get('password') == password_hash:
                 session['user_id'] = str(user['_id'])
-                session['is_admin'] = user.get('is_admin', False)
-                flash('Successfully logged in!', 'success')
-                return redirect(url_for('dashboard'))
+                session['is_admin'] = bool(user.get('is_admin', False))
+            flash('Successfully logged in!', 'success')
+            return redirect(url_for('dashboard'))
         flash('Invalid username or password', 'error')
     return render_template('login.html')
 
@@ -112,7 +112,7 @@ def lesson_detail(lesson_id):
 @app.route('/create_lesson')
 @login_required
 def create_lesson():
-    if not session.get('is_admin'):
+    if not session.get('is_admin', False):
         flash('Access denied', 'error')
         return redirect(url_for('dashboard'))
     return render_template('create_lesson.html')
@@ -125,7 +125,7 @@ def quizzes():
 @app.route('/create_quiz')
 @login_required
 def create_quiz():
-    if not session.get('is_admin'):
+    if not session.get('is_admin', False):
         flash('Access denied', 'error')
         return redirect(url_for('dashboard'))
     return render_template('create_quiz.html')
