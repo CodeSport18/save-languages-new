@@ -5,6 +5,7 @@ from translations import translations
 from bson.objectid import ObjectId
 from pymongo import MongoClient
 from dotenv import load_dotenv
+import hashlib
 load_dotenv()
 
 app = Flask(__name__)
@@ -53,26 +54,29 @@ def homepage():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form['username']
+        username = request.form['username'].strip().lower()
         password = request.form['password']
         user = users_collection.find_one({'username': username})
-        if user and user.get('password') == password:
-            session['user_id'] = str(user['_id'])
-            session['is_admin'] = user.get('is_admin', False)
-            flash('Successfully logged in!', 'success')
-            return redirect(url_for('dashboard'))
+        if user:
+            password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
+            if user.get('password') == password_hash:
+                session['user_id'] = str(user['_id'])
+                session['is_admin'] = user.get('is_admin', False)
+                flash('Successfully logged in!', 'success')
+                return redirect(url_for('dashboard'))
         flash('Invalid username or password', 'error')
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form['username']
+        username = request.form['username'].strip().lower()
         password = request.form['password']
         if users_collection.find_one({'username': username}):
             flash('Username already exists', 'error')
         else:
-            users_collection.insert_one({'username': username, 'password': password, 'is_admin': False})
+            password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
+            users_collection.insert_one({'username': username, 'password': password_hash, 'is_admin': False})
             flash('Registration successful! Please login.', 'success')
             return redirect(url_for('login'))
     return render_template('register.html')
