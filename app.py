@@ -16,9 +16,7 @@ mongo_uri = os.environ.get('MONGO_URI')
 client = MongoClient(mongo_uri)
 db = client['koshur']
 lessons_collection = db['lessons']
-
-# User database (in-memory for simplicity)
-users = {}
+users_collection = db['users']
 
 def login_required(f):
     @wraps(f)
@@ -57,9 +55,10 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        if username in users and users[username]['password'] == password:
-            session['user_id'] = username
-            session['is_admin'] = users[username].get('is_admin', False)
+        user = users_collection.find_one({'username': username})
+        if user and user.get('password') == password:
+            session['user_id'] = str(user['_id'])
+            session['is_admin'] = user.get('is_admin', False)
             flash('Successfully logged in!', 'success')
             return redirect(url_for('dashboard'))
         flash('Invalid username or password', 'error')
@@ -70,10 +69,10 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        if username in users:
+        if users_collection.find_one({'username': username}):
             flash('Username already exists', 'error')
         else:
-            users[username] = {'password': password, 'is_admin': False}
+            users_collection.insert_one({'username': username, 'password': password, 'is_admin': False})
             flash('Registration successful! Please login.', 'success')
             return redirect(url_for('login'))
     return render_template('register.html')
