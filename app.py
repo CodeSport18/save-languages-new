@@ -4,13 +4,15 @@ import os
 from translations import translations
 from bson.objectid import ObjectId
 from pymongo import MongoClient
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', '!hUcAZCNrL-HM&-')
 
 # MongoDB connection
-with open('password.txt') as f:
-    mongo_uri = f.read().strip()
+
+mongo_uri = os.environ.get('MONGO_URI')
 client = MongoClient(mongo_uri)
 db = client['koshur']
 lessons_collection = db['lessons']
