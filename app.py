@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, g, abort
+from flask import Flask, render_template, request, redirect, url_for, session, flash, g, abort, jsonify
 from functools import wraps
 import os
 from translations import translations
@@ -6,6 +6,8 @@ from bson.objectid import ObjectId
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import hashlib
+from werkzeug.utils import secure_filename
+import time
 load_dotenv()
 
 app = Flask(__name__)
@@ -18,6 +20,16 @@ client = MongoClient(mongo_uri)
 db = client['koshur']
 lessons_collection = db['lessons']
 users_collection = db['users']
+
+# Ensure upload directories exist
+UPLOAD_FOLDER = os.path.join('static', 'uploads')
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def login_required(f):
     @wraps(f)
@@ -150,6 +162,26 @@ def change_language(language):
     if language in translations:
         session['locale'] = language
     return redirect(request.referrer or url_for('homepage'))
+
+@app.route('/upload_inline_image', methods=['POST'])
+@login_required
+def upload_inline_image():
+    if 'image' not in request.files:
+        return jsonify({'success': False, 'error': 'No image file provided'})
+    
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'success': False, 'error': 'No selected file'})
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        # Add timestamp to filename to prevent overwriting
+        filename = f"{int(time.time())}_{filename}"
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(filepath)
+        return jsonify({'success': True, 'filename': filename})
+    
+    return jsonify({'success': False, 'error': 'Invalid file type'})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)
