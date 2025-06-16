@@ -395,7 +395,7 @@ document.addEventListener('change', async function(e) {
                         textarea.value = textarea.value.replace(existingImage[0], '');
                     }
                     
-                    const imageTag = `\n<img src="/static/uploads/${data.filename}" alt="${file.name}" class="lesson-image">\n`;
+                    const imageTag = `\n<img src="${data.url}" alt="${file.name}" class="lesson-image">\n`;
                     textarea.value = imageTag + textarea.value;
                     slideEditor.querySelector('.slide-image-path').value = data.filename;
                 }

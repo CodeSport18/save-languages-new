@@ -8,28 +8,50 @@ from dotenv import load_dotenv
 import hashlib
 from werkzeug.utils import secure_filename
 import time
+import boto3
+from botocore.exceptions import ClientError
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', '!hUcAZCNrL-HM&-')
 
 # MongoDB connection
-
 mongo_uri = os.environ.get('MONGO_URI')
 client = MongoClient(mongo_uri)
 db = client['koshur']
 lessons_collection = db['lessons']
 users_collection = db['users']
 
-# Ensure upload directories exist
-UPLOAD_FOLDER = os.path.join('static', 'uploads')
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+# AWS S3 configuration
+s3_client = boto3.client(
+    's3',
+    aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+    aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
+    region_name=os.environ.get('AWS_REGION', 'us-east-1')
+)
+S3_BUCKET = os.environ.get('S3_BUCKET')
+S3_BASE_URL = f"https://{S3_BUCKET}.s3.amazonaws.com"
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def upload_to_s3(file, filename):
+    try:
+        s3_client.upload_fileobj(
+            file,
+            S3_BUCKET,
+            f"uploads/{filename}",
+            ExtraArgs={
+                'ACL': 'public-read',
+                'ContentType': file.content_type
+            }
+        )
+        return f"{S3_BASE_URL}/uploads/{filename}"
+    except ClientError as e:
+        print(f"Error uploading to S3: {e}")
+        return None
 
 def login_required(f):
     @wraps(f)
@@ -177,9 +199,13 @@ def upload_inline_image():
         filename = secure_filename(file.filename)
         # Add timestamp to filename to prevent overwriting
         filename = f"{int(time.time())}_{filename}"
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
-        file.save(filepath)
-        return jsonify({'success': True, 'filename': filename})
+        
+        # Upload to S3
+        s3_url = upload_to_s3(file, filename)
+        if s3_url:
+            return jsonify({'success': True, 'filename': filename, 'url': s3_url})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to upload image to S3'})
     
     return jsonify({'success': False, 'error': 'Invalid file type'})
 
