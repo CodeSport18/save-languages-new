@@ -44,7 +44,6 @@ def upload_to_s3(file, filename):
             S3_BUCKET,
             f"uploads/{filename}",
             ExtraArgs={
-                'ACL': 'public-read',
                 'ContentType': file.content_type
             }
         )
@@ -188,6 +187,7 @@ def change_language(language):
 @app.route('/upload_inline_image', methods=['POST'])
 @login_required
 def upload_inline_image():
+    print(request.form)
     if 'image' not in request.files:
         return jsonify({'success': False, 'error': 'No image file provided'})
     

@@ -30,7 +30,8 @@
                                 </button>
                             </div>
                         </div>
-                        <textarea class="form-control slide-content" name="slide_content" rows="6" required></textarea>
+                        <div class="form-control slide-content rich-editor" contenteditable="true" data-placeholder="Type your content here..." style="min-height: 150px; max-height: 400px; overflow-y: auto;"></div>
+                        <textarea class="form-control slide-content-hidden" name="slide_content" style="display: none;"></textarea>
                         <input type="file" class="slide-image-input" style="display: none" accept="image/*">
                         <input type="file" class="slide-audio-input" style="display: none" accept="audio/*">
                         <input type="hidden" name="slide_image" class="slide-image-path">
@@ -188,6 +189,50 @@
     border-radius: 4px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
+
+.rich-editor {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    background-color: #fff;
+    line-height: 1.5;
+    font-family: inherit;
+    font-size: 1rem;
+}
+
+.rich-editor:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.rich-editor:empty:before {
+    content: attr(data-placeholder);
+    color: #6c757d;
+    font-style: italic;
+}
+
+.rich-editor img {
+    max-width: 100%;
+    max-height: 400px;
+    width: auto;
+    height: auto;
+    display: inline-block;
+    margin: 0.5rem 0;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    vertical-align: middle;
+}
+
+.rich-editor p {
+    margin: 0.5rem 0;
+}
+
+.rich-editor br {
+    display: block;
+    content: "";
+    margin: 0.25rem 0;
+}
 </style>
 
 <script>
@@ -214,6 +259,41 @@ let mediaRecorder;
 let audioChunks = [];
 let currentSlideIndex;
 let recordingStream;
+let savedSelection = null;
+
+// Function to save cursor position
+function saveSelection() {
+    if (window.getSelection) {
+        const sel = window.getSelection();
+        if (sel.getRangeAt && sel.rangeCount) {
+            savedSelection = sel.getRangeAt(0);
+        }
+    }
+}
+
+// Function to restore cursor position
+function restoreSelection() {
+    if (savedSelection) {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(savedSelection);
+    }
+}
+
+// Function to insert content at cursor position
+function insertAtCursor(content) {
+    if (savedSelection) {
+        savedSelection.deleteContents();
+        const div = document.createElement('div');
+        div.innerHTML = content;
+        const fragment = document.createDocumentFragment();
+        while (div.firstChild) {
+            fragment.appendChild(div.firstChild);
+        }
+        savedSelection.insertNode(fragment);
+        savedSelection.collapse(false);
+    }
+}
 
 function addSlide() {
     slideCount++;
@@ -242,7 +322,8 @@ function addSlide() {
                 </button>
             </div>
         </div>
-        <textarea class="form-control slide-content" name="slide_content" rows="6" required></textarea>
+        <div class="form-control slide-content rich-editor" contenteditable="true" data-placeholder="Type your content here..." style="min-height: 150px; max-height: 400px; overflow-y: auto;"></div>
+        <textarea class="form-control slide-content-hidden" name="slide_content" style="display: none;"></textarea>
         <input type="file" class="slide-image-input" style="display: none" accept="image/*">
         <input type="file" class="slide-audio-input" style="display: none" accept="audio/*">
         <input type="hidden" name="slide_image" class="slide-image-path">
@@ -250,6 +331,35 @@ function addSlide() {
     `;
     
     container.appendChild(newSlide);
+    
+    // Setup image deletion monitoring for the new slide
+    const newRichEditor = newSlide.querySelector('.rich-editor');
+    if (newRichEditor) {
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'childList') {
+                    mutation.removedNodes.forEach(function(node) {
+                        if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'IMG') {
+                            // Image was deleted, remove from preview
+                            const slideEditor = newRichEditor.closest('.slide-editor');
+                            const imagePreview = slideEditor.querySelector('.image-preview');
+                            if (imagePreview) {
+                                const previewImg = imagePreview.querySelector('img');
+                                if (previewImg && previewImg.src === node.src) {
+                                    imagePreview.remove();
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        });
+        
+        observer.observe(newRichEditor, {
+            childList: true,
+            subtree: true
+        });
+    }
 }
 
 function removeSlide(button) {
@@ -382,11 +492,40 @@ $('#recordingModal').on('hidden.bs.modal', function () {
     document.getElementById('recordButton').classList.add('btn-danger');
 });
 
+// Add event listeners for rich editor cursor position
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('rich-editor')) {
+        saveSelection();
+    }
+});
+
+document.addEventListener('keyup', function(e) {
+    if (e.target.classList.contains('rich-editor')) {
+        saveSelection();
+        // Sync hidden textarea with rich editor content
+        const hiddenTextarea = e.target.parentElement.querySelector('.slide-content-hidden');
+        if (hiddenTextarea) {
+            hiddenTextarea.value = e.target.innerHTML;
+        }
+    }
+});
+
+document.addEventListener('input', function(e) {
+    if (e.target.classList.contains('rich-editor')) {
+        // Sync hidden textarea with rich editor content
+        const hiddenTextarea = e.target.parentElement.querySelector('.slide-content-hidden');
+        if (hiddenTextarea) {
+            hiddenTextarea.value = e.target.innerHTML;
+        }
+    }
+});
+
 // Add event listener for media uploads
 document.addEventListener('change', async function(e) {
     if (e.target.classList.contains('slide-image-input')) {
         const slideEditor = e.target.closest('.slide-editor');
-        const textarea = slideEditor.querySelector('.slide-content');
+        const richEditor = slideEditor.querySelector('.rich-editor');
+        const hiddenTextarea = slideEditor.querySelector('.slide-content-hidden');
         const file = e.target.files[0]; // Only take first file
         
         if (file) {
@@ -401,14 +540,12 @@ document.addEventListener('change', async function(e) {
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Remove any existing image
-                    const existingImage = textarea.value.match(/<img[^>]+>/);
-                    if (existingImage) {
-                        textarea.value = textarea.value.replace(existingImage[0], '');
-                    }
+                    // Insert image at cursor position
+                    const imageTag = `<img src="${data.url}" alt="${file.name}" class="lesson-image">`;
+                    insertAtCursor(imageTag);
                     
-                    const imageTag = `\n<img src="${data.url}" alt="${file.name}" class="lesson-image">\n`;
-                    textarea.value = imageTag + textarea.value;
+                    // Update hidden textarea with HTML content
+                    hiddenTextarea.value = richEditor.innerHTML;
                     slideEditor.querySelector('.slide-image-path').value = data.filename;
                     
                     // Add or update image preview
@@ -469,6 +606,53 @@ document.addEventListener('change', async function(e) {
 
 document.getElementById('hasQuiz').addEventListener('change', function() {
     document.getElementById('quizSection').style.display = this.checked ? 'block' : 'none';
+});
+
+// Sync all rich editors before form submission
+document.getElementById('lessonForm').addEventListener('submit', function(e) {
+    const richEditors = document.querySelectorAll('.rich-editor');
+    richEditors.forEach(richEditor => {
+        const hiddenTextarea = richEditor.parentElement.querySelector('.slide-content-hidden');
+        if (hiddenTextarea) {
+            hiddenTextarea.value = richEditor.innerHTML;
+        }
+    });
+});
+
+// Monitor for image deletions in rich editors
+function setupImageDeletionMonitor() {
+    const richEditors = document.querySelectorAll('.rich-editor');
+    richEditors.forEach(richEditor => {
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'childList') {
+                    mutation.removedNodes.forEach(function(node) {
+                        if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'IMG') {
+                            // Image was deleted, remove from preview
+                            const slideEditor = richEditor.closest('.slide-editor');
+                            const imagePreview = slideEditor.querySelector('.image-preview');
+                            if (imagePreview) {
+                                const previewImg = imagePreview.querySelector('img');
+                                if (previewImg && previewImg.src === node.src) {
+                                    imagePreview.remove();
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        });
+        
+        observer.observe(richEditor, {
+            childList: true,
+            subtree: true
+        });
+    });
+}
+
+// Setup monitoring when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    setupImageDeletionMonitor();
 });
 
 let questionCount = 1;
