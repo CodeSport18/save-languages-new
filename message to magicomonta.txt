@@ -1,0 +1,7 @@
+Hi Magicomonta,
+
+I would like to ask 2 questions.
+
+1. How did you make this database?
+
+2. Would it be possible to apply our own editor data files (E.G. Most files from https://www.fmscout.com/a-increase-realism-megapack-fm24.html as well as sortitoutsi's 3 letter name fixes for clubs like Manchester United) to this same database?

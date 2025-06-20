@@ -176,6 +176,18 @@
     align-items: center;
     gap: 10px;
 }
+
+.image-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.image-preview img {
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
 </style>
 
 <script>
@@ -398,6 +410,19 @@ document.addEventListener('change', async function(e) {
                     const imageTag = `\n<img src="${data.url}" alt="${file.name}" class="lesson-image">\n`;
                     textarea.value = imageTag + textarea.value;
                     slideEditor.querySelector('.slide-image-path').value = data.filename;
+                    
+                    // Add or update image preview
+                    let preview = slideEditor.querySelector('.image-preview');
+                    if (!preview) {
+                        preview = document.createElement('div');
+                        preview.className = 'image-preview mt-2';
+                        slideEditor.appendChild(preview);
+                    }
+                    preview.innerHTML = `
+                        <i class="fas fa-image"></i>
+                        <span>${file.name}</span>
+                        <img src="${data.url}" alt="${file.name}" class="lesson-image" style="max-width: 200px; max-height: 150px;">
+                    `;
                 }
             } catch (error) {
                 console.error('Error uploading image:', error);
