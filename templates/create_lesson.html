@@ -233,6 +233,13 @@
     content: "";
     margin: 0.25rem 0;
 }
+
+.rich-editor audio {
+    max-width: 100%;
+    margin: 0.5rem 0;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
 </style>
 
 <script>
@@ -332,21 +339,33 @@ function addSlide() {
     
     container.appendChild(newSlide);
     
-    // Setup image deletion monitoring for the new slide
+    // Setup media deletion monitoring for the new slide
     const newRichEditor = newSlide.querySelector('.rich-editor');
     if (newRichEditor) {
         const observer = new MutationObserver(function(mutations) {
             mutations.forEach(function(mutation) {
                 if (mutation.type === 'childList') {
                     mutation.removedNodes.forEach(function(node) {
-                        if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'IMG') {
-                            // Image was deleted, remove from preview
-                            const slideEditor = newRichEditor.closest('.slide-editor');
-                            const imagePreview = slideEditor.querySelector('.image-preview');
-                            if (imagePreview) {
-                                const previewImg = imagePreview.querySelector('img');
-                                if (previewImg && previewImg.src === node.src) {
-                                    imagePreview.remove();
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            if (node.tagName === 'IMG') {
+                                // Image was deleted, remove from preview
+                                const slideEditor = newRichEditor.closest('.slide-editor');
+                                const imagePreview = slideEditor.querySelector('.image-preview');
+                                if (imagePreview) {
+                                    const previewImg = imagePreview.querySelector('img');
+                                    if (previewImg && previewImg.src === node.src) {
+                                        imagePreview.remove();
+                                    }
+                                }
+                            } else if (node.tagName === 'AUDIO') {
+                                // Audio was deleted, remove from preview
+                                const slideEditor = newRichEditor.closest('.slide-editor');
+                                const audioPreview = slideEditor.querySelector('.audio-preview');
+                                if (audioPreview) {
+                                    const previewAudio = audioPreview.querySelector('audio');
+                                    if (previewAudio && previewAudio.src === node.src) {
+                                        audioPreview.remove();
+                                    }
                                 }
                             }
                         }
@@ -445,6 +464,18 @@ async function saveRecording() {
     const formData = new FormData();
     formData.append('audio', audioBlob, 'recording.wav');
     
+    // Show loading indicator
+    const slideEditor = document.querySelector(`.slide-editor[data-slide="${currentSlideIndex}"]`);
+    const loadingMsg = document.createElement('div');
+    loadingMsg.className = 'alert alert-info alert-dismissible fade show mt-2';
+    loadingMsg.innerHTML = `
+        <i class="fas fa-spinner fa-spin"></i> Uploading recorded audio...
+        <button type="button" class="close" data-dismiss="alert">
+            <span>&times;</span>
+        </button>
+    `;
+    slideEditor.appendChild(loadingMsg);
+    
     try {
         const response = await fetch('/upload_audio', {
             method: 'POST',
@@ -452,9 +483,25 @@ async function saveRecording() {
         });
         const data = await response.json();
         
+        // Remove loading indicator
+        if (loadingMsg.parentNode) {
+            loadingMsg.remove();
+        }
+        
         if (data.success) {
             const slideEditor = document.querySelector(`.slide-editor[data-slide="${currentSlideIndex}"]`);
             slideEditor.querySelector('.slide-audio-path').value = data.filename;
+            
+            // Insert audio player at cursor position
+            const audioTag = `<audio controls style="margin: 10px 0;"><source src="${data.url}" type="audio/wav"></audio>`;
+            insertAtCursor(audioTag);
+            
+            // Update hidden textarea with HTML content
+            const richEditor = slideEditor.querySelector('.rich-editor');
+            const hiddenTextarea = slideEditor.querySelector('.slide-content-hidden');
+            if (richEditor && hiddenTextarea) {
+                hiddenTextarea.value = richEditor.innerHTML;
+            }
             
             // Add or update audio preview
             let preview = slideEditor.querySelector('.audio-preview');
@@ -467,15 +514,51 @@ async function saveRecording() {
                 <i class="fas fa-music"></i>
                 <span>${t.recorded_audio}</span>
                 <audio controls>
-                    <source src="/static/uploads/${data.filename}" type="audio/wav">
+                    <source src="${data.url}" type="audio/wav">
                 </audio>
             `;
+            
+            // Show success message
+            const successMsg = document.createElement('div');
+            successMsg.className = 'alert alert-success alert-dismissible fade show mt-2';
+            successMsg.innerHTML = `
+                <i class="fas fa-check-circle"></i> Audio uploaded successfully!
+                <button type="button" class="close" data-dismiss="alert">
+                    <span>&times;</span>
+                </button>
+            `;
+            slideEditor.appendChild(successMsg);
+            
+            // Auto-dismiss after 3 seconds
+            setTimeout(() => {
+                if (successMsg.parentNode) {
+                    successMsg.remove();
+                }
+            }, 3000);
             
             // Close modal and cleanup
             $('#recordingModal').modal('hide');
             if (recordingStream) {
                 recordingStream.getTracks().forEach(track => track.stop());
             }
+        } else {
+            // Show error message
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'alert alert-danger alert-dismissible fade show mt-2';
+            errorMsg.innerHTML = `
+                <i class="fas fa-exclamation-circle"></i> ${data.error || 'Failed to upload audio'}
+                <button type="button" class="close" data-dismiss="alert">
+                    <span>&times;</span>
+                </button>
+            `;
+            slideEditor.appendChild(errorMsg);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                if (errorMsg.parentNode) {
+                    errorMsg.remove();
+                }
+            }, 5000);
         }
     } catch (error) {
         console.error('Error saving recording:', error);
@@ -573,6 +656,17 @@ document.addEventListener('change', async function(e) {
             const formData = new FormData();
             formData.append('audio', file);
             
+            // Show loading indicator
+            const loadingMsg = document.createElement('div');
+            loadingMsg.className = 'alert alert-info alert-dismissible fade show mt-2';
+            loadingMsg.innerHTML = `
+                <i class="fas fa-spinner fa-spin"></i> Uploading audio...
+                <button type="button" class="close" data-dismiss="alert">
+                    <span>&times;</span>
+                </button>
+            `;
+            slideEditor.appendChild(loadingMsg);
+            
             try {
                 const response = await fetch('/upload_audio', {
                     method: 'POST',
@@ -580,8 +674,25 @@ document.addEventListener('change', async function(e) {
                 });
                 const data = await response.json();
                 
+                // Remove loading indicator
+                if (loadingMsg.parentNode) {
+                    loadingMsg.remove();
+                }
+                
                 if (data.success) {
                     slideEditor.querySelector('.slide-audio-path').value = data.filename;
+                    
+                    // Insert audio player at cursor position
+                    const audioTag = `<audio controls style="margin: 10px 0;"><source src="${data.url}" type="${file.type}"></audio>`;
+                    insertAtCursor(audioTag);
+                    
+                    // Update hidden textarea with HTML content
+                    const richEditor = slideEditor.querySelector('.rich-editor');
+                    const hiddenTextarea = slideEditor.querySelector('.slide-content-hidden');
+                    if (richEditor && hiddenTextarea) {
+                        hiddenTextarea.value = richEditor.innerHTML;
+                    }
+                    
                     // Add or update audio preview
                     let preview = slideEditor.querySelector('.audio-preview');
                     if (!preview) {
@@ -593,9 +704,45 @@ document.addEventListener('change', async function(e) {
                         <i class="fas fa-music"></i>
                         <span>${file.name}</span>
                         <audio controls>
-                            <source src="/static/uploads/${data.filename}" type="${file.type}">
+                            <source src="${data.url}" type="${file.type}">
                         </audio>
                     `;
+                    
+                    // Show success message
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'alert alert-success alert-dismissible fade show mt-2';
+                    successMsg.innerHTML = `
+                        <i class="fas fa-check-circle"></i> Audio uploaded successfully!
+                        <button type="button" class="close" data-dismiss="alert">
+                            <span>&times;</span>
+                        </button>
+                    `;
+                    slideEditor.appendChild(successMsg);
+                    
+                    // Auto-dismiss after 3 seconds
+                    setTimeout(() => {
+                        if (successMsg.parentNode) {
+                            successMsg.remove();
+                        }
+                    }, 3000);
+                } else {
+                    // Show error message
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'alert alert-danger alert-dismissible fade show mt-2';
+                    errorMsg.innerHTML = `
+                        <i class="fas fa-exclamation-circle"></i> ${data.error || 'Failed to upload audio'}
+                        <button type="button" class="close" data-dismiss="alert">
+                            <span>&times;</span>
+                        </button>
+                    `;
+                    slideEditor.appendChild(errorMsg);
+                    
+                    // Auto-dismiss after 5 seconds
+                    setTimeout(() => {
+                        if (errorMsg.parentNode) {
+                            errorMsg.remove();
+                        }
+                    }, 5000);
                 }
             } catch (error) {
                 console.error('Error uploading audio:', error);
@@ -619,22 +766,34 @@ document.getElementById('lessonForm').addEventListener('submit', function(e) {
     });
 });
 
-// Monitor for image deletions in rich editors
-function setupImageDeletionMonitor() {
+// Monitor for media deletions in rich editors
+function setupMediaDeletionMonitor() {
     const richEditors = document.querySelectorAll('.rich-editor');
     richEditors.forEach(richEditor => {
         const observer = new MutationObserver(function(mutations) {
             mutations.forEach(function(mutation) {
                 if (mutation.type === 'childList') {
                     mutation.removedNodes.forEach(function(node) {
-                        if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'IMG') {
-                            // Image was deleted, remove from preview
-                            const slideEditor = richEditor.closest('.slide-editor');
-                            const imagePreview = slideEditor.querySelector('.image-preview');
-                            if (imagePreview) {
-                                const previewImg = imagePreview.querySelector('img');
-                                if (previewImg && previewImg.src === node.src) {
-                                    imagePreview.remove();
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            if (node.tagName === 'IMG') {
+                                // Image was deleted, remove from preview
+                                const slideEditor = richEditor.closest('.slide-editor');
+                                const imagePreview = slideEditor.querySelector('.image-preview');
+                                if (imagePreview) {
+                                    const previewImg = imagePreview.querySelector('img');
+                                    if (previewImg && previewImg.src === node.src) {
+                                        imagePreview.remove();
+                                    }
+                                }
+                            } else if (node.tagName === 'AUDIO') {
+                                // Audio was deleted, remove from preview
+                                const slideEditor = richEditor.closest('.slide-editor');
+                                const audioPreview = slideEditor.querySelector('.audio-preview');
+                                if (audioPreview) {
+                                    const previewAudio = audioPreview.querySelector('audio');
+                                    if (previewAudio && previewAudio.src === node.src) {
+                                        audioPreview.remove();
+                                    }
                                 }
                             }
                         }
@@ -652,7 +811,7 @@ function setupImageDeletionMonitor() {
 
 // Setup monitoring when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    setupImageDeletionMonitor();
+    setupMediaDeletionMonitor();
 });
 
 let questionCount = 1;
