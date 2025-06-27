@@ -10,6 +10,7 @@ from werkzeug.utils import secure_filename
 import time
 import boto3
 from botocore.exceptions import ClientError
+import datetime
 load_dotenv()
 
 app = Flask(__name__)
@@ -163,7 +164,7 @@ def create_lesson():
         lesson = {
             'title': title,
             'slides': slides,
-            'date_created': time.strftime('%Y-%m-%d'),
+            'date_created': datetime.datetime.utcnow(),
             'is_slide_format': True
         }
         lessons_collection.insert_one(lesson)

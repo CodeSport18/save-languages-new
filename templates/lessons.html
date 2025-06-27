@@ -19,7 +19,14 @@
                     <div class="card">
                         <div class="card-body">
                             <h5 class="card-title">{{ lesson.title }}</h5>
-                            <p class="card-text text-muted">Created on: {{ lesson.date_created.strftime('%B %d, %Y') }}</p>
+                            <p class="card-text text-muted">
+                                Created on:
+                                {% if lesson.date_created and lesson.date_created.strftime %}
+                                    {{ lesson.date_created.strftime('%B %d, %Y') }}
+                                {% else %}
+                                    {{ lesson.date_created }}
+                                {% endif %}
+                            </p>
                             <div class="d-flex justify-content-between">
                                 <a href="{{ url_for('lesson_detail', lesson_id=lesson._id) }}" class="btn btn-primary">Start Lesson</a>
                                 {% if session.get('is_admin') %}
