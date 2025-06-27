@@ -148,12 +148,27 @@ def lesson_detail(lesson_id):
         abort(404)
     return render_template('lesson_detail.html', lesson=lesson)
 
-@app.route('/create_lesson')
+@app.route('/create_lesson', methods=['GET', 'POST'])
 @login_required
 def create_lesson():
     if not session.get('is_admin', False):
         flash('Access denied', 'error')
         return redirect(url_for('dashboard'))
+    if request.method == 'POST':
+        # Basic lesson creation logic (expand as needed)
+        title = request.form.get('lesson_title')
+        slides = []
+        for i in range(len(request.form.getlist('slide_content'))):
+            slides.append(request.form.getlist('slide_content')[i])
+        lesson = {
+            'title': title,
+            'slides': slides,
+            'date_created': time.strftime('%Y-%m-%d'),
+            'is_slide_format': True
+        }
+        lessons_collection.insert_one(lesson)
+        flash('Lesson created successfully!', 'success')
+        return redirect(url_for('lessons'))
     return render_template('create_lesson.html')
 
 @app.route('/quizzes')
