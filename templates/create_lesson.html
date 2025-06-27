@@ -561,7 +561,7 @@ async function startRecording(slideIndex) {
         const recordButton = document.getElementById('recordButton');
         const stopButton = document.getElementById('stopButton');
         const recordingStatus = document.getElementById('recordingStatus');
-        const recordingTimer = document.getElementById('recordingTimer');
+        const recordingTimerElem = document.getElementById('recordingTimer');
         
         // Start recording
         mediaRecorder.start();
@@ -571,7 +571,7 @@ async function startRecording(slideIndex) {
         recordButton.style.display = 'none';
         stopButton.style.display = 'inline-block';
         recordingStatus.textContent = t.recording_in_progress;
-        recordingTimer.style.display = 'block';
+        recordingTimerElem.style.display = 'block';
         
         // Start timer
         recordingTimer = setInterval(updateTimer, 1000);
