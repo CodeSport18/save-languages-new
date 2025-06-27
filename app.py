@@ -98,9 +98,12 @@ def login():
             if user.get('password') == password_hash:
                 session['user_id'] = str(user['_id'])
                 session['is_admin'] = bool(user.get('is_admin', False))
-            flash('Successfully logged in!', 'success')
-            return redirect(url_for('dashboard'))
-        flash('Invalid username or password', 'error')
+                flash('Successfully logged in!', 'success')
+                return redirect(url_for('dashboard'))
+            else:
+                flash('Wrong password', 'error')
+        else:
+            flash('Invalid username or password', 'error')
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -210,6 +213,8 @@ def upload_inline_image():
             return jsonify({'success': True, 'filename': filename, 'url': s3_url})
         else:
             return jsonify({'success': False, 'error': 'Failed to upload image to S3'})
+    
+    print(file,filename)
     
     return jsonify({'success': False, 'error': 'Invalid file type'})
 
