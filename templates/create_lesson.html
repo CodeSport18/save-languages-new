@@ -60,11 +60,11 @@
                                 <div class="question-block mb-4">
                                     <div class="form-group">
                                         <label>{{ t.question }} 1</label>
-                                        <input type="text" class="form-control" name="quiz_questions[]" required>
+                                        <input type="text" class="form-control" name="quiz_questions[]">
                                     </div>
                                     <div class="form-group">
                                         <label>{{ t.answer }}</label>
-                                        <input type="text" class="form-control" name="quiz_answers[]" required>
+                                        <input type="text" class="form-control" name="quiz_answers[]">
                                     </div>
                                 </div>
                             </div>
@@ -1081,7 +1081,14 @@ document.addEventListener('change', async function(e) {
 });
 
 document.getElementById('hasQuiz').addEventListener('change', function() {
-    document.getElementById('quizSection').style.display = this.checked ? 'block' : 'none';
+    const quizSection = document.getElementById('quizSection');
+    quizSection.style.display = this.checked ? 'block' : 'none';
+
+    // Toggle required attribute for quiz fields
+    const questionInputs = quizSection.querySelectorAll('input[name="quiz_questions[]"]');
+    const answerInputs = quizSection.querySelectorAll('input[name="quiz_answers[]"]');
+    questionInputs.forEach(input => input.required = this.checked);
+    answerInputs.forEach(input => input.required = this.checked);
 });
 
 // Sync all rich editors before form submission
@@ -1146,23 +1153,19 @@ document.addEventListener('DOMContentLoaded', function() {
 let questionCount = 1;
 
 function addQuestion() {
-    questionCount++;
     const container = document.getElementById('questionContainer');
+    const questionCount = container.querySelectorAll('.question-block').length + 1;
+    const quizEnabled = document.getElementById('hasQuiz').checked;
     const questionBlock = document.createElement('div');
     questionBlock.className = 'question-block mb-4';
     questionBlock.innerHTML = `
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <label>{{ t.question }} ${questionCount}</label>
-            <button type="button" class="btn btn-sm btn-danger" onclick="removeQuestion(this)">
-                {{ t.remove_question }}
-            </button>
-        </div>
         <div class="form-group">
-            <input type="text" class="form-control" name="quiz_questions[]" required>
+            <label>{{ t.question }} ${questionCount}</label>
+            <input type="text" class="form-control" name="quiz_questions[]"${quizEnabled ? ' required' : ''}>
         </div>
         <div class="form-group">
             <label>{{ t.answer }}</label>
-            <input type="text" class="form-control" name="quiz_answers[]" required>
+            <input type="text" class="form-control" name="quiz_answers[]"${quizEnabled ? ' required' : ''}>
         </div>
     `;
     container.appendChild(questionBlock);
