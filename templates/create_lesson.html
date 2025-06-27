@@ -86,7 +86,7 @@
 
 <!-- Add recording modal -->
 <div class="modal fade" id="recordingModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">{{ t.record_audio }}</h5>
@@ -96,11 +96,32 @@
             </div>
             <div class="modal-body text-center">
                 <div id="recordingStatus" class="mb-3">{{ t.press_to_record }}</div>
-                <button id="recordButton" class="btn btn-danger btn-lg mb-3">
-                    <i class="fas fa-microphone"></i>
-                </button>
+                
+                <!-- WaveSurfer.js waveform container -->
+                <div id="waveform" class="mb-3" style="height: 100px; background: #f8f9fa; border-radius: 8px;"></div>
+                
+                <!-- Recording controls -->
+                <div class="recording-controls mb-3">
+                    <button id="recordButton" class="btn btn-danger btn-lg mr-2">
+                        <i class="fas fa-microphone"></i> {{ t.record_audio }}
+                    </button>
+                    <button id="stopButton" class="btn btn-warning btn-lg" style="display: none;">
+                        <i class="fas fa-stop"></i> {{ t.stop_recording }}
+                    </button>
+                </div>
+                
+                <!-- Recording timer -->
+                <div id="recordingTimer" class="mb-3" style="display: none;">
+                    <span class="badge badge-info" style="font-size: 1.2em;">
+                        <i class="fas fa-clock"></i> <span id="timerDisplay">00:00</span>
+                    </span>
+                </div>
+                
+                <!-- Recording preview -->
                 <div id="recordingPreview" style="display: none;">
-                    <audio id="recordingPlayback" controls></audio>
+                    <h6 class="mb-2">{{ t.recording_preview }}</h6>
+                    <div id="playbackWaveform" style="height: 80px; background: #f8f9fa; border-radius: 8px; margin-bottom: 10px;"></div>
+                    <audio id="recordingPlayback" controls style="width: 100%;"></audio>
                 </div>
             </div>
             <div class="modal-footer">
@@ -147,6 +168,9 @@
         </div>
     </div>
 </div>
+
+<!-- WaveSurfer.js CDN -->
+<script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
 
 <style>
 .slide-editor {
@@ -240,6 +264,22 @@
     border-radius: 4px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
+
+/* WaveSurfer.js custom styling */
+#waveform, #playbackWaveform {
+    border: 1px solid #dee2e6;
+}
+
+.recording-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+#recordingTimer {
+    font-family: 'Courier New', monospace;
+}
 </style>
 
 <script>
@@ -248,11 +288,17 @@ const t = {
     remove_slide: "{{ t.remove_slide }}",
     insert_image: "{{ t.insert_image }}",
     add_audio: "{{ t.add_audio }}",
+    upload_audio: "{{ t.upload_audio }}",
+    audio_upload_success: "{{ t.audio_upload_success }}",
+    audio_upload_error: "{{ t.audio_upload_error }}",
+    uploading_audio: "{{ t.uploading_audio }}",
     preview: "{{ t.preview }}",
     recording: "{{ t.recording }}",
     recording_in_progress: "{{ t.recording_in_progress }}",
     recording_complete: "{{ t.recording_complete }}",
     press_to_record: "{{ t.press_to_record }}",
+    stop_recording: "{{ t.stop_recording }}",
+    recording_preview: "{{ t.recording_preview }}",
     microphone_error: "{{ t.microphone_error }}",
     recorded_audio: "{{ t.recorded_audio }}",
     mic_permission_needed: "{{ t.mic_permission_needed }}",
@@ -266,6 +312,76 @@ let mediaRecorder;
 let audioChunks = [];
 let currentSlideIndex;
 let recordingStream;
+let recordingStartTime;
+let recordingTimer;
+let wavesurfer;
+let playbackWavesurfer;
+
+// Initialize WaveSurfer.js
+function initWaveSurfer() {
+    // Initialize recording waveform
+    wavesurfer = WaveSurfer.create({
+        container: '#waveform',
+        waveColor: '#4F4A85',
+        progressColor: '#383351',
+        cursorColor: '#fff',
+        barWidth: 2,
+        barRadius: 3,
+        cursorWidth: 1,
+        height: 100,
+        barGap: 3,
+        responsive: true
+    });
+
+    // Initialize playback waveform
+    playbackWavesurfer = WaveSurfer.create({
+        container: '#playbackWaveform',
+        waveColor: '#4F4A85',
+        progressColor: '#383351',
+        cursorColor: '#fff',
+        barWidth: 2,
+        barRadius: 3,
+        cursorWidth: 1,
+        height: 80,
+        barGap: 3,
+        responsive: true
+    });
+}
+
+// Initialize WaveSurfer when modal is shown
+$('#recordingModal').on('shown.bs.modal', function () {
+    initWaveSurfer();
+});
+
+// Clean up WaveSurfer when modal is hidden
+$('#recordingModal').on('hidden.bs.modal', function () {
+    if (wavesurfer) {
+        wavesurfer.destroy();
+        wavesurfer = null;
+    }
+    if (playbackWavesurfer) {
+        playbackWavesurfer.destroy();
+        playbackWavesurfer = null;
+    }
+    if (recordingStream) {
+        recordingStream.getTracks().forEach(track => track.stop());
+    }
+    document.getElementById('recordingPreview').style.display = 'none';
+    document.getElementById('recordButton').classList.remove('btn-warning');
+    document.getElementById('recordButton').classList.add('btn-danger');
+    document.getElementById('stopButton').style.display = 'none';
+    document.getElementById('recordingTimer').style.display = 'none';
+    clearInterval(recordingTimer);
+});
+
+// Update recording timer display
+function updateTimer() {
+    const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+    const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+    const seconds = (elapsed % 60).toString().padStart(2, '0');
+    document.getElementById('timerDisplay').textContent = `${minutes}:${seconds}`;
+}
+
 let savedSelection = null;
 
 // Function to save cursor position
@@ -429,6 +545,36 @@ async function startRecording(slideIndex) {
         recordingStream = stream;
         mediaRecorder = new MediaRecorder(stream);
         
+        // Reset audio chunks
+        audioChunks = [];
+        
+        // Show recording modal
+        $('#recordingModal').modal('show');
+        
+        // Set up recording controls
+        const recordButton = document.getElementById('recordButton');
+        const stopButton = document.getElementById('stopButton');
+        const recordingStatus = document.getElementById('recordingStatus');
+        const recordingTimer = document.getElementById('recordingTimer');
+        
+        // Start recording
+        mediaRecorder.start();
+        recordingStartTime = Date.now();
+        
+        // Update UI
+        recordButton.style.display = 'none';
+        stopButton.style.display = 'inline-block';
+        recordingStatus.textContent = t.recording_in_progress;
+        recordingTimer.style.display = 'block';
+        
+        // Start timer
+        recordingTimer = setInterval(updateTimer, 1000);
+        
+        // Start real-time waveform visualization
+        if (wavesurfer) {
+            wavesurfer.startRecording();
+        }
+        
         mediaRecorder.ondataavailable = (event) => {
             audioChunks.push(event.data);
         };
@@ -436,15 +582,26 @@ async function startRecording(slideIndex) {
         mediaRecorder.onstop = () => {
             const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
             const audioUrl = URL.createObjectURL(audioBlob);
+            
+            // Load audio into playback waveform
+            if (playbackWavesurfer) {
+                playbackWavesurfer.loadBlob(audioBlob);
+            }
+            
             document.getElementById('recordingPlayback').src = audioUrl;
             document.getElementById('recordingPreview').style.display = 'block';
             document.getElementById('saveRecording').disabled = false;
             
-            // Close modal and cleanup
-            $('#recordingModal').modal('hide');
-            if (recordingStream) {
-                recordingStream.getTracks().forEach(track => track.stop());
+            // Stop recording visualization
+            if (wavesurfer) {
+                wavesurfer.stopRecording();
             }
+            
+            // Reset UI
+            recordButton.style.display = 'inline-block';
+            stopButton.style.display = 'none';
+            recordingStatus.textContent = t.recording_complete;
+            clearInterval(recordingTimer);
         };
         
     } catch (err) {
@@ -456,6 +613,29 @@ async function startRecording(slideIndex) {
         }
     }
 }
+
+// Add stop recording function
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+    }
+}
+
+// Add event listeners for recording controls
+document.addEventListener('DOMContentLoaded', function() {
+    const recordButton = document.getElementById('recordButton');
+    const stopButton = document.getElementById('stopButton');
+    
+    if (recordButton) {
+        recordButton.addEventListener('click', function() {
+            startRecording(currentSlideIndex);
+        });
+    }
+    
+    if (stopButton) {
+        stopButton.addEventListener('click', stopRecording);
+    }
+});
 
 async function saveRecording() {
     if (audioChunks.length === 0) return;
@@ -469,7 +649,7 @@ async function saveRecording() {
     const loadingMsg = document.createElement('div');
     loadingMsg.className = 'alert alert-info alert-dismissible fade show mt-2';
     loadingMsg.innerHTML = `
-        <i class="fas fa-spinner fa-spin"></i> Uploading recorded audio...
+        <i class="fas fa-spinner fa-spin"></i> ${t.uploading_audio}
         <button type="button" class="close" data-dismiss="alert">
             <span>&times;</span>
         </button>
@@ -522,7 +702,7 @@ async function saveRecording() {
             const successMsg = document.createElement('div');
             successMsg.className = 'alert alert-success alert-dismissible fade show mt-2';
             successMsg.innerHTML = `
-                <i class="fas fa-check-circle"></i> Audio uploaded successfully!
+                <i class="fas fa-check-circle"></i> ${t.audio_upload_success}
                 <button type="button" class="close" data-dismiss="alert">
                     <span>&times;</span>
                 </button>
@@ -546,7 +726,7 @@ async function saveRecording() {
             const errorMsg = document.createElement('div');
             errorMsg.className = 'alert alert-danger alert-dismissible fade show mt-2';
             errorMsg.innerHTML = `
-                <i class="fas fa-exclamation-circle"></i> ${data.error || 'Failed to upload audio'}
+                <i class="fas fa-exclamation-circle"></i> ${data.error || t.audio_upload_error}
                 <button type="button" class="close" data-dismiss="alert">
                     <span>&times;</span>
                 </button>
@@ -615,12 +795,28 @@ document.addEventListener('change', async function(e) {
             const formData = new FormData();
             formData.append('image', file);
             
+            // Show loading indicator
+            const loadingMsg = document.createElement('div');
+            loadingMsg.className = 'alert alert-info alert-dismissible fade show mt-2';
+            loadingMsg.innerHTML = `
+                <i class="fas fa-spinner fa-spin"></i> Uploading image...
+                <button type="button" class="close" data-dismiss="alert">
+                    <span>&times;</span>
+                </button>
+            `;
+            slideEditor.appendChild(loadingMsg);
+            
             try {
                 const response = await fetch('/upload_inline_image', {
                     method: 'POST',
                     body: formData
                 });
                 const data = await response.json();
+                
+                // Remove loading indicator
+                if (loadingMsg.parentNode) {
+                    loadingMsg.remove();
+                }
                 
                 if (data.success) {
                     // Insert image at cursor position
@@ -641,8 +837,44 @@ document.addEventListener('change', async function(e) {
                     preview.innerHTML = `
                         <i class="fas fa-image"></i>
                         <span>${file.name}</span>
-                        <img src="${data.url}" alt="${file.name}" class="lesson-image" style="max-width: 200px; max-height: 150px;">
+                        <img src="${data.url}" alt="${file.name}" style="max-width: 100px; max-height: 100px;">
                     `;
+                    
+                    // Show success message
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'alert alert-success alert-dismissible fade show mt-2';
+                    successMsg.innerHTML = `
+                        <i class="fas fa-check-circle"></i> ${t.audio_upload_success}
+                        <button type="button" class="close" data-dismiss="alert">
+                            <span>&times;</span>
+                        </button>
+                    `;
+                    slideEditor.appendChild(successMsg);
+                    
+                    // Auto-dismiss after 3 seconds
+                    setTimeout(() => {
+                        if (successMsg.parentNode) {
+                            successMsg.remove();
+                        }
+                    }, 3000);
+                } else {
+                    // Show error message
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'alert alert-danger alert-dismissible fade show mt-2';
+                    errorMsg.innerHTML = `
+                        <i class="fas fa-exclamation-circle"></i> ${data.error || 'Failed to upload image'}
+                        <button type="button" class="close" data-dismiss="alert">
+                            <span>&times;</span>
+                        </button>
+                    `;
+                    slideEditor.appendChild(errorMsg);
+                    
+                    // Auto-dismiss after 5 seconds
+                    setTimeout(() => {
+                        if (errorMsg.parentNode) {
+                            errorMsg.remove();
+                        }
+                    }, 5000);
                 }
             } catch (error) {
                 console.error('Error uploading image:', error);
@@ -650,7 +882,9 @@ document.addEventListener('change', async function(e) {
         }
     } else if (e.target.classList.contains('slide-audio-input')) {
         const slideEditor = e.target.closest('.slide-editor');
-        const file = e.target.files[0];
+        const richEditor = slideEditor.querySelector('.rich-editor');
+        const hiddenTextarea = slideEditor.querySelector('.slide-content-hidden');
+        const file = e.target.files[0]; // Only take first file
         
         if (file) {
             const formData = new FormData();
@@ -660,7 +894,7 @@ document.addEventListener('change', async function(e) {
             const loadingMsg = document.createElement('div');
             loadingMsg.className = 'alert alert-info alert-dismissible fade show mt-2';
             loadingMsg.innerHTML = `
-                <i class="fas fa-spinner fa-spin"></i> Uploading audio...
+                <i class="fas fa-spinner fa-spin"></i> ${t.uploading_audio}
                 <button type="button" class="close" data-dismiss="alert">
                     <span>&times;</span>
                 </button>
@@ -680,18 +914,13 @@ document.addEventListener('change', async function(e) {
                 }
                 
                 if (data.success) {
-                    slideEditor.querySelector('.slide-audio-path').value = data.filename;
-                    
                     // Insert audio player at cursor position
                     const audioTag = `<audio controls style="margin: 10px 0;"><source src="${data.url}" type="${file.type}"></audio>`;
                     insertAtCursor(audioTag);
                     
                     // Update hidden textarea with HTML content
-                    const richEditor = slideEditor.querySelector('.rich-editor');
-                    const hiddenTextarea = slideEditor.querySelector('.slide-content-hidden');
-                    if (richEditor && hiddenTextarea) {
-                        hiddenTextarea.value = richEditor.innerHTML;
-                    }
+                    hiddenTextarea.value = richEditor.innerHTML;
+                    slideEditor.querySelector('.slide-audio-path').value = data.filename;
                     
                     // Add or update audio preview
                     let preview = slideEditor.querySelector('.audio-preview');
@@ -703,7 +932,7 @@ document.addEventListener('change', async function(e) {
                     preview.innerHTML = `
                         <i class="fas fa-music"></i>
                         <span>${file.name}</span>
-                        <audio controls>
+                        <audio controls style="max-width: 200px;">
                             <source src="${data.url}" type="${file.type}">
                         </audio>
                     `;
@@ -712,7 +941,7 @@ document.addEventListener('change', async function(e) {
                     const successMsg = document.createElement('div');
                     successMsg.className = 'alert alert-success alert-dismissible fade show mt-2';
                     successMsg.innerHTML = `
-                        <i class="fas fa-check-circle"></i> Audio uploaded successfully!
+                        <i class="fas fa-check-circle"></i> ${t.audio_upload_success}
                         <button type="button" class="close" data-dismiss="alert">
                             <span>&times;</span>
                         </button>
