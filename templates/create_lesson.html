@@ -292,6 +292,10 @@ const t = {
     audio_upload_success: "{{ t.audio_upload_success }}",
     audio_upload_error: "{{ t.audio_upload_error }}",
     uploading_audio: "{{ t.uploading_audio }}",
+    upload_image: "{{ t.upload_image }}",
+    image_upload_success: "{{ t.image_upload_success }}",
+    image_upload_error: "{{ t.image_upload_error }}",
+    uploading_image: "{{ t.uploading_image }}",
     preview: "{{ t.preview }}",
     recording: "{{ t.recording }}",
     recording_in_progress: "{{ t.recording_in_progress }}",
@@ -351,6 +355,8 @@ function initWaveSurfer() {
 // Initialize WaveSurfer when modal is shown
 $('#recordingModal').on('shown.bs.modal', function () {
     initWaveSurfer();
+    // Start recording when modal is shown
+    startRecording(currentSlideIndex);
 });
 
 // Clean up WaveSurfer when modal is hidden
@@ -372,6 +378,9 @@ $('#recordingModal').on('hidden.bs.modal', function () {
     document.getElementById('stopButton').style.display = 'none';
     document.getElementById('recordingTimer').style.display = 'none';
     clearInterval(recordingTimer);
+    
+    // Reset audio chunks
+    audioChunks = [];
 });
 
 // Update recording timer display
@@ -548,9 +557,6 @@ async function startRecording(slideIndex) {
         // Reset audio chunks
         audioChunks = [];
         
-        // Show recording modal
-        $('#recordingModal').modal('show');
-        
         // Set up recording controls
         const recordButton = document.getElementById('recordButton');
         const stopButton = document.getElementById('stopButton');
@@ -628,7 +634,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (recordButton) {
         recordButton.addEventListener('click', function() {
-            startRecording(currentSlideIndex);
+            // Show recording modal first, then start recording
+            $('#recordingModal').modal('show');
         });
     }
     
@@ -638,6 +645,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function saveRecording() {
+    // First stop recording if it's still running
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        // Wait a bit for the recording to stop
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
     if (audioChunks.length === 0) return;
     
     const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
@@ -745,16 +759,6 @@ async function saveRecording() {
     }
 }
 
-// Clean up when modal is closed
-$('#recordingModal').on('hidden.bs.modal', function () {
-    if (recordingStream) {
-        recordingStream.getTracks().forEach(track => track.stop());
-    }
-    document.getElementById('recordingPreview').style.display = 'none';
-    document.getElementById('recordButton').classList.remove('btn-warning');
-    document.getElementById('recordButton').classList.add('btn-danger');
-});
-
 // Add event listeners for rich editor cursor position
 document.addEventListener('click', function(e) {
     if (e.target.classList.contains('rich-editor')) {
@@ -799,7 +803,7 @@ document.addEventListener('change', async function(e) {
             const loadingMsg = document.createElement('div');
             loadingMsg.className = 'alert alert-info alert-dismissible fade show mt-2';
             loadingMsg.innerHTML = `
-                <i class="fas fa-spinner fa-spin"></i> Uploading image...
+                <i class="fas fa-spinner fa-spin"></i> ${t.uploading_image}
                 <button type="button" class="close" data-dismiss="alert">
                     <span>&times;</span>
                 </button>
@@ -844,7 +848,7 @@ document.addEventListener('change', async function(e) {
                     const successMsg = document.createElement('div');
                     successMsg.className = 'alert alert-success alert-dismissible fade show mt-2';
                     successMsg.innerHTML = `
-                        <i class="fas fa-check-circle"></i> ${t.audio_upload_success}
+                        <i class="fas fa-check-circle"></i> ${t.image_upload_success}
                         <button type="button" class="close" data-dismiss="alert">
                             <span>&times;</span>
                         </button>
@@ -862,7 +866,7 @@ document.addEventListener('change', async function(e) {
                     const errorMsg = document.createElement('div');
                     errorMsg.className = 'alert alert-danger alert-dismissible fade show mt-2';
                     errorMsg.innerHTML = `
-                        <i class="fas fa-exclamation-circle"></i> ${data.error || 'Failed to upload image'}
+                        <i class="fas fa-exclamation-circle"></i> ${data.error || t.image_upload_error}
                         <button type="button" class="close" data-dismiss="alert">
                             <span>&times;</span>
                         </button>
@@ -941,7 +945,7 @@ document.addEventListener('change', async function(e) {
                     const successMsg = document.createElement('div');
                     successMsg.className = 'alert alert-success alert-dismissible fade show mt-2';
                     successMsg.innerHTML = `
-                        <i class="fas fa-check-circle"></i> ${t.audio_upload_success}
+                        <i class="fas fa-check-circle"></i> Image uploaded successfully!
                         <button type="button" class="close" data-dismiss="alert">
                             <span>&times;</span>
                         </button>
