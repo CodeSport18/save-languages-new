@@ -190,7 +190,7 @@ def change_language(language):
 @app.route('/upload_inline_image', methods=['POST'])
 @login_required
 def upload_inline_image():
-    print(request.form)
+    print(request.form,request.files)
     if 'image' not in request.files:
         return jsonify({'success': False, 'error': 'No image file provided'})
     
@@ -205,6 +205,7 @@ def upload_inline_image():
         
         # Upload to S3
         s3_url = upload_to_s3(file, filename)
+        print(file,filename)
         if s3_url:
             return jsonify({'success': True, 'filename': filename, 'url': s3_url})
         else:
