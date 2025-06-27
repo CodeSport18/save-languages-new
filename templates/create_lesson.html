@@ -22,20 +22,12 @@
                                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertImage(0)">
                                     <i class="fas fa-image"></i> {{ t.insert_image }}
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertAudio(0)">
-                                    <i class="fas fa-file-audio"></i> {{ t.add_audio }}
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="startRecording(0)">
-                                    <i class="fas fa-microphone"></i> {{ t.record_audio }}
-                                </button>
                             </div>
                         </div>
                         <div class="form-control slide-content rich-editor" contenteditable="true" data-placeholder="Type your content here..." style="min-height: 150px; max-height: 400px; overflow-y: auto;"></div>
                         <textarea class="form-control slide-content-hidden" name="slide_content" style="display: none;"></textarea>
                         <input type="file" class="slide-image-input" style="display: none" accept="image/*">
-                        <input type="file" class="slide-audio-input" style="display: none" accept="audio/*">
                         <input type="hidden" name="slide_image" class="slide-image-path">
-                        <input type="hidden" name="slide_audio" class="slide-audio-path">
                     </div>
                 </div>
 
@@ -83,94 +75,6 @@
         </div>
     </div>
 </div>
-
-<!-- Add recording modal -->
-<div class="modal fade" id="recordingModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">{{ t.record_audio }}</h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <div class="modal-body text-center">
-                <div id="recordingStatus" class="mb-3">{{ t.press_to_record }}</div>
-                
-                <!-- WaveSurfer.js waveform container -->
-                <div id="waveform" class="mb-3" style="height: 100px; background: #f8f9fa; border-radius: 8px;"></div>
-                
-                <!-- Recording controls -->
-                <div class="recording-controls mb-3">
-                    <button id="recordButton" class="btn btn-danger btn-lg mr-2">
-                        <i class="fas fa-microphone"></i> {{ t.record_audio }}
-                    </button>
-                    <button id="stopButton" class="btn btn-warning btn-lg" style="display: none;">
-                        <i class="fas fa-stop"></i> {{ t.stop_recording }}
-                    </button>
-                </div>
-                
-                <!-- Recording timer -->
-                <div id="recordingTimer" class="mb-3" style="display: none;">
-                    <span class="badge badge-info" style="font-size: 1.2em;">
-                        <i class="fas fa-clock"></i> <span id="timerDisplay">00:00</span>
-                    </span>
-                </div>
-                
-                <!-- Recording preview -->
-                <div id="recordingPreview" style="display: none;">
-                    <h6 class="mb-2">{{ t.recording_preview }}</h6>
-                    <div id="playbackWaveform" style="height: 80px; background: #f8f9fa; border-radius: 8px; margin-bottom: 10px;"></div>
-                    <audio id="recordingPlayback" controls style="width: 100%;"></audio>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ t.cancel }}</button>
-                <button type="button" class="btn btn-primary" onclick="saveRecording()" disabled id="saveRecording">
-                    {{ t.save_recording }}
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Add this modal for microphone permissions -->
-<div class="modal fade" id="micPermissionModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">{{ t.mic_permission_needed }}</h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="text-center mb-3">
-                    <i class="fas fa-microphone-slash fa-3x text-danger mb-3"></i>
-                    <p>{{ t.mic_permission_explanation }}</p>
-                </div>
-                <div class="browser-instructions">
-                    <h6>{{ t.enable_mic_instructions }}</h6>
-                    <ol>
-                        <li>{{ t.click_lock_icon }} <i class="fas fa-lock"></i></li>
-                        <li>{{ t.find_microphone_settings }}</li>
-                        <li>{{ t.select_allow }}</li>
-                        <li>{{ t.refresh_page }}</li>
-                    </ol>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ t.cancel }}</button>
-                <button type="button" class="btn btn-primary" onclick="requestMicPermission()">
-                    {{ t.try_again }}
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- WaveSurfer.js CDN -->
-<script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
 
 <style>
 .slide-editor {
@@ -441,20 +345,12 @@ function addSlide() {
                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertImage(${slideCount - 1})">
                     <i class="fas fa-image"></i> ${t.insert_image}
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertAudio(${slideCount - 1})">
-                    <i class="fas fa-file-audio"></i> ${t.add_audio}
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="startRecording(${slideCount - 1})">
-                    <i class="fas fa-microphone"></i> ${t.record_audio}
-                </button>
             </div>
         </div>
         <div class="form-control slide-content rich-editor" contenteditable="true" data-placeholder="Type your content here..." style="min-height: 150px; max-height: 400px; overflow-y: auto;"></div>
         <textarea class="form-control slide-content-hidden" name="slide_content" style="display: none;"></textarea>
         <input type="file" class="slide-image-input" style="display: none" accept="image/*">
-        <input type="file" class="slide-audio-input" style="display: none" accept="audio/*">
         <input type="hidden" name="slide_image" class="slide-image-path">
-        <input type="hidden" name="slide_audio" class="slide-audio-path">
     `;
     
     container.appendChild(newSlide);
@@ -475,16 +371,6 @@ function addSlide() {
                                     const previewImg = imagePreview.querySelector('img');
                                     if (previewImg && previewImg.src === node.src) {
                                         imagePreview.remove();
-                                    }
-                                }
-                            } else if (node.tagName === 'AUDIO') {
-                                // Audio was deleted, remove from preview
-                                const slideEditor = newRichEditor.closest('.slide-editor');
-                                const audioPreview = slideEditor.querySelector('.audio-preview');
-                                if (audioPreview) {
-                                    const previewAudio = audioPreview.querySelector('audio');
-                                    if (previewAudio && previewAudio.src === node.src) {
-                                        audioPreview.remove();
                                     }
                                 }
                             }
@@ -1119,16 +1005,6 @@ function setupMediaDeletionMonitor() {
                                     const previewImg = imagePreview.querySelector('img');
                                     if (previewImg && previewImg.src === node.src) {
                                         imagePreview.remove();
-                                    }
-                                }
-                            } else if (node.tagName === 'AUDIO') {
-                                // Audio was deleted, remove from preview
-                                const slideEditor = richEditor.closest('.slide-editor');
-                                const audioPreview = slideEditor.querySelector('.audio-preview');
-                                if (audioPreview) {
-                                    const previewAudio = audioPreview.querySelector('audio');
-                                    if (previewAudio && previewAudio.src === node.src) {
-                                        audioPreview.remove();
                                     }
                                 }
                             }
