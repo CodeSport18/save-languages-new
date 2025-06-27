@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History of Cricket in India</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .slide-container {
+            background: #fff;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 900px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        
+        .slide {
+            display: none;
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        .slide.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        h1 {
+            color: #d4af37;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+            font-size: 2.5em;
+        }
+        
+        h2 {
+            color: #2a5298;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 25px;
+            font-style: italic;
+            font-size: 1.2em;
+        }
+        
+        .content {
+            text-align: left;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1.1em;
+        }
+        
+        .timeline {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .timeline-item {
+            background: #f0f8ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px;
+            flex: 1;
+            min-width: 200px;
+            border-left: 4px solid #d4af37;
+        }
+        
+        .timeline-year {
+            font-weight: bold;
+            color: #d4af37;
+            font-size: 1.2em;
+        }
+        
+        .player-card {
+            background: linear-gradient(135deg, #f0f8ff, #e6f3ff);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border: 2px solid #d4af37;
+        }
+        
+        .player-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2a5298;
+            margin-bottom: 10px;
+        }
+        
+        .achievement-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .achievement-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .achievement-list li:before {
+            content: "🏏 ";
+            margin-right: 10px;
+        }
+        
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+        
+        .nav-btn {
+            background: #d4af37;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        .nav-btn:hover {
+            background: #b8941f;
+        }
+        
+        .nav-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .slide-counter {
+            color: #666;
+            font-size: 14px;
+            margin-top: 15px;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+            margin: 15px 0;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #d4af37;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <!-- Slide 1: Introduction -->
+        <div class="slide active" id="slide1">
+            <h1>🏏 History of Cricket in India 🏏</h1>
+            <p class="subtitle">From Colonial Beginnings to Global Dominance</p>
+            <div class="content">
+                <p>Cricket in India is more than just a sport - it's a religion that unites a billion people. From its humble beginnings during British colonial rule to becoming the world's most passionate cricket nation, India's journey with cricket is a fascinating tale of evolution, passion, and excellence.</p>
+                
+                <div class="highlight">
+                    <strong>Did you know?</strong> Cricket was first introduced to India by British sailors and merchants in the early 18th century, but it wasn't until the late 19th century that Indians began playing the sport seriously.
+                </div>
+                
+                <p>This presentation will take you through the key milestones, legendary players, and defining moments that shaped cricket in India over the past 150+ years.</p>
+            </div>
+        </div>
+
+        <!-- Slide 2: Early Beginnings -->
+        <div class="slide" id="slide2">
+            <h2>🏛️ Early Beginnings (1721-1889)</h2>
+            <p class="subtitle">The Colonial Introduction</p>
+            <div class="content">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-year">1721</div>
+                        <p>First recorded cricket match in India by British sailors in Cambay, Gujarat</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">1792</div>
+                        <p>Calcutta Cricket Club established - the first cricket club in India</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">1848</div>
+                        <p>Bombay Gymkhana founded, becoming a major cricket center</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">1889</div>
+                        <p>First Indian cricket team tours England (Parsis team)</p>
+                    </div>
+                </div>
+                
+                <div class="highlight">
+                    <strong>Key Development:</strong> Initially, cricket was played primarily by British officials and military personnel. Indian participation was limited to the elite classes who had access to British education and social circles.
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Pre-Independence Era -->
+        <div class="slide" id="slide3">
+            <h2>🇮🇳 Pre-Independence Era (1890-1947)</h2>
+            <p class="subtitle">The Foundation Years</p>
+            <div class="content">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-year">1911</div>
+                        <p>All-India tour of England - first major Indian cricket tour</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">1926</div>
+                        <p>Board of Control for Cricket in India (BCCI) established</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">1932</div>
+                        <p>India's first Test match against England at Lord's</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">1933</div>
+                        <p>First Test match on Indian soil (Bombay Gymkhana)</p>
+                    </div>
+                </div>
+                
+                <div class="player-card">
+                    <div class="player-name">🏆 CK Nayudu - The First Indian Cricket Star</div>
+                    <ul class="achievement-list">
+                        <li>India's first Test captain</li>
+                        <li>Scored 153 in India's debut Test innings</li>
+                        <li>Known as the "Father of Indian Cricket"</li>
+                        <li>Played first-class cricket until age 60</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Post-Independence Growth -->
+        <div class="slide" id="slide4">
+            <h2>🆕 Post-Independence Growth (1947-1970)</h2>
+            <p class="subtitle">Building the Foundation</p>
+            <div class="content">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-year">1952</div>
+                        <p>India's first Test series victory (vs England at home)</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">1958</div>
+                        <p>India's first overseas Test victory (vs New Zealand)</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">1967</div>
+                        <p>India's first Test series victory abroad (vs New Zealand)</p>
+                    </div>
+                </div>
+                
+                <div class="player-card">
+                    <div class="player-name">🏆 Vijay Merchant - The Batting Legend</div>
+                    <ul class="achievement-list">
+                        <li>Career average of 47.72 in Test cricket</li>
+                        <li>First Indian to score 1000+ runs in a season</li>
+                        <li>Known for his impeccable technique</li>
+                        <li>Played a crucial role in India's first Test series win</li>
+                    </ul>
+                </div>
+                
+                <div class="highlight">
+                    <strong>Development:</strong> This period saw the emergence of domestic cricket structure and the rise of several talented players who would lay the foundation for India's future success.
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: The Spin Era -->
+        <div class="slide" id="slide5">
+            <h2>🔄 The Spin Era (1970-1990)</h2>
+            <p class="subtitle">India's Golden Age of Spin Bowling</p>
+            <div class="content">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-year">1971</div>
+                        <p>Historic series wins in West Indies and England</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">1975</div>
+                        <p>India's first World Cup appearance</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">1983</div>
+                        <p>India wins the Cricket World Cup - The Miracle of Lord's</p>
+                    </div>
+                </div>
+                
+                <div class="player-card">
+                    <div class="player-name">🏆 The Spin Quartet</div>
+                    <ul class="achievement-list">
+                        <li><strong>Bishan Bedi:</strong> 266 Test wickets, master of flight</li>
+                        <li><strong>Erapalli Prasanna:</strong> 189 Test wickets, off-spin wizard</li>
+                        <li><strong>Bhagwat Chandrasekhar:</strong> 242 Test wickets, leg-spin genius</li>
+                        <li><strong>Srinivas Venkataraghavan:</strong> 156 Test wickets, accurate off-spinner</li>
+                    </ul>
+                </div>
+                
+                <div class="highlight">
+                    <strong>1983 World Cup Victory:</strong> Kapil Dev's team defeated the mighty West Indies in the final, changing Indian cricket forever and inspiring a generation of cricketers.
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: The Sachin Era -->
+        <div class="slide" id="slide6">
+            <h2>🌟 The Sachin Era (1990-2013)</h2>
+            <p class="subtitle">The God of Cricket</p>
+            <div class="content">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-year">1989</div>
+                        <p>Sachin Tendulkar makes Test debut at age 16</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">1996</div>
+                        <p>India hosts World Cup, reaches semifinals</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2003</div>
+                        <p>India reaches World Cup final</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2011</div>
+                        <p>India wins World Cup after 28 years</p>
+                    </div>
+                </div>
+                
+                <div class="player-card">
+                    <div class="player-name">🏆 Sachin Tendulkar - The Master Blaster</div>
+                    <ul class="achievement-list">
+                        <li>100 international centuries</li>
+                        <li>34,357 international runs</li>
+                        <li>200 Test matches</li>
+                        <li>463 ODI matches</li>
+                        <li>24 years of international cricket</li>
+                    </ul>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-number">15,921</div>
+                        <div class="stat-label">Test Runs</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">18,426</div>
+                        <div class="stat-label">ODI Runs</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">51</div>
+                        <div class="stat-label">Test Centuries</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">49</div>
+                        <div class="stat-label">ODI Centuries</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: Modern Era -->
+        <div class="slide" id="slide7">
+            <h2>🚀 Modern Era (2013-Present)</h2>
+            <p class="subtitle">The Age of Dominance</p>
+            <div class="content">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-year">2013</div>
+                        <p>India wins Champions Trophy</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2017</div>
+                        <p>India reaches Champions Trophy final</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2019</div>
+                        <p>India reaches World Cup semifinals</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2023</div>
+                        <p>India hosts World Cup, reaches final</p>
+                    </div>
+                </div>
+                
+                <div class="player-card">
+                    <div class="player-name">🏆 Virat Kohli - The Modern Master</div>
+                    <ul class="achievement-list">
+                        <li>50 ODI centuries (most by any player)</li>
+                        <li>29 Test centuries</li>
+                        <li>Fastest to 12,000 ODI runs</li>
+                        <li>Most successful Test captain for India</li>
+                        <li>ICC Cricketer of the Decade (2011-2020)</li>
+                    </ul>
+                </div>
+                
+                <div class="highlight">
+                    <strong>Current Dominance:</strong> India has become a cricketing superpower with world-class players across all formats, state-of-the-art infrastructure, and the world's richest cricket board (BCCI).
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: IPL Revolution -->
+        <div class="slide" id="slide8">
+            <h2>💎 IPL Revolution (2008-Present)</h2>
+            <p class="subtitle">The Game Changer</p>
+            <div class="content">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-year">2008</div>
+                        <p>Indian Premier League launched</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2010</div>
+                        <p>Mumbai Indians wins first IPL title</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2011</div>
+                        <p>Chennai Super Kings wins second title</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2023</div>
+                        <p>IPL becomes world's richest cricket league</p>
+                    </div>
+                </div>
+                
+                <div class="highlight">
+                    <strong>IPL Impact:</strong> The IPL revolutionized cricket by introducing franchise-based T20 cricket, attracting global talent, and creating unprecedented financial opportunities for players.
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-number">₹48,390 Cr</div>
+                        <div class="stat-label">IPL Brand Value (2023)</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">10</div>
+                        <div class="stat-label">Franchise Teams</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">74 Days</div>
+                        <div class="stat-label">Tournament Duration</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">500M+</div>
+                        <div class="stat-label">Global Viewers</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: Women's Cricket -->
+        <div class="slide" id="slide9">
+            <h2>👩‍🏏 Women's Cricket in India</h2>
+            <p class="subtitle">Breaking Barriers</p>
+            <div class="content">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-year">1973</div>
+                        <p>Women's Cricket Association of India formed</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">1976</div>
+                        <p>India's first women's Test match</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2005</div>
+                        <p>India reaches Women's World Cup final</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2017</div>
+                        <p>India reaches Women's World Cup final again</p>
+                    </div>
+                </div>
+                
+                <div class="player-card">
+                    <div class="player-name">🏆 Mithali Raj - The Run Machine</div>
+                    <ul class="achievement-list">
+                        <li>Most runs in women's international cricket</li>
+                        <li>7,805 ODI runs</li>
+                        <li>699 Test runs</li>
+                        <li>Longest-serving Indian women's captain</li>
+                        <li>ICC Women's Cricketer of the Year (2005)</li>
+                    </ul>
+                </div>
+                
+                <div class="highlight">
+                    <strong>Recent Success:</strong> Indian women's cricket has seen tremendous growth with players like Harmanpreet Kaur, Smriti Mandhana, and Jhulan Goswami achieving global recognition.
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: Conclusion -->
+        <div class="slide" id="slide10">
+            <h2>🎯 The Future of Indian Cricket</h2>
+            <p class="subtitle">Continuing the Legacy</p>
+            <div class="content">
+                <div class="highlight">
+                    <strong>Current Status:</strong> India is now a cricketing powerhouse with world-class infrastructure, talented players, and passionate fans. The BCCI is the richest cricket board globally, and Indian players are among the highest-paid athletes in the sport.
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-number">2</div>
+                        <div class="stat-label">World Cup Titles</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">5</div>
+                        <div class="stat-label">Champions Trophy Titles</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">1B+</div>
+                        <div class="stat-label">Cricket Fans</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">₹6,000 Cr</div>
+                        <div class="stat-label">BCCI Annual Revenue</div>
+                    </div>
+                </div>
+                
+                <div class="player-card">
+                    <div class="player-name">🏆 Emerging Stars</div>
+                    <ul class="achievement-list">
+                        <li><strong>Shubman Gill:</strong> Next batting superstar</li>
+                        <li><strong>Rishabh Pant:</strong> Revolutionary wicketkeeper-batsman</li>
+                        <li><strong>Jasprit Bumrah:</strong> World-class fast bowler</li>
+                        <li><strong>Ravindra Jadeja:</strong> All-round excellence</li>
+                        <li><strong>Shreyas Iyer:</strong> Middle-order backbone</li>
+                    </ul>
+                </div>
+                
+                <p><strong>The Journey Continues:</strong> From colonial beginnings to global dominance, Indian cricket has come a long way. With passionate fans, talented players, and strong infrastructure, the future of Indian cricket looks brighter than ever.</p>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="navigation">
+            <button class="nav-btn" id="prevBtn" onclick="previousSlide()">← Previous</button>
+            <div class="slide-counter">
+                <span id="currentSlide">1</span> of <span id="totalSlides">10</span>
+            </div>
+            <button class="nav-btn" id="nextBtn" onclick="nextSlide()">Next →</button>
+        </div>
+    </div>
+
+    <script>
+        let currentSlideIndex = 0;
+        const totalSlides = 10;
+        
+        function showSlide(index) {
+            // Hide all slides
+            const slides = document.querySelectorAll('.slide');
+            slides.forEach(slide => slide.classList.remove('active'));
+            
+            // Show current slide
+            slides[index].classList.add('active');
+            
+            // Update navigation buttons
+            document.getElementById('prevBtn').disabled = index === 0;
+            document.getElementById('nextBtn').disabled = index === totalSlides - 1;
+            
+            // Update counter
+            document.getElementById('currentSlide').textContent = index + 1;
+            document.getElementById('totalSlides').textContent = totalSlides;
+        }
+        
+        function nextSlide() {
+            if (currentSlideIndex < totalSlides - 1) {
+                currentSlideIndex++;
+                showSlide(currentSlideIndex);
+            }
+        }
+        
+        function previousSlide() {
+            if (currentSlideIndex > 0) {
+                currentSlideIndex--;
+                showSlide(currentSlideIndex);
+            }
+        }
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                previousSlide();
+            }
+        });
+        
+        // Initialize
+        showSlide(0);
+    </script>
+</body>
+</html> 
