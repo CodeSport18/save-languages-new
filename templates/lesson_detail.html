@@ -14,7 +14,9 @@
                         {% for slide in lesson.slides %}
                             <div class="carousel-item {% if loop.first %}active{% endif %}">
                                 <div class="slide-content">
-                                    {{ slide|replace('\n', '<br>')|safe }}
+                                    {% if slide %}
+                                        {{ slide|replace('\n', '<br>')|safe }}
+                                    {% endif %}
                                 </div>
                                 <div class="slide-number text-muted text-center mt-3">
                                     {{ t.slide }} {{ loop.index }}/{{ lesson.slides|length }}

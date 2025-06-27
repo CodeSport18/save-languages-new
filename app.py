@@ -158,9 +158,7 @@ def create_lesson():
     if request.method == 'POST':
         # Basic lesson creation logic (expand as needed)
         title = request.form.get('lesson_title')
-        slides = []
-        for i in range(len(request.form.getlist('slide_content'))):
-            slides.append(request.form.getlist('slide_content')[i])
+        slides = [s for s in request.form.getlist('slide_content') if s and s.strip()]
         lesson = {
             'title': title,
             'slides': slides,
