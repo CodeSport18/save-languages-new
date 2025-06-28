@@ -41,11 +41,7 @@ For audio upload functionality, you'll need to set up the following environment 
 
 ## Running the Application
 
-```bash
-python app.py
-```
-
-The application will be available at `http://localhost:5001`
+To run this application, go to the heroku website.
 
 ## Security Note
 

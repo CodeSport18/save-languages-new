@@ -229,5 +229,23 @@ def upload_inline_image():
     
     return jsonify({'success': False, 'error': 'Invalid file type'})
 
+@app.route('/delete_lesson/<lesson_id>')
+@login_required
+def delete_lesson(lesson_id):
+    if not session.get('is_admin', False):
+        flash('Access denied', 'error')
+        return redirect(url_for('lessons'))
+    password = request.args.get('password', '')
+    user = users_collection.find_one({'_id': ObjectId(session['user_id'])})
+    if not user or user.get('password') != hashlib.sha256(password.encode('utf-8')).hexdigest():
+        flash('Incorrect admin password.', 'error')
+        return redirect(url_for('lessons'))
+    try:
+        lessons_collection.delete_one({'_id': ObjectId(lesson_id)})
+        flash('Lesson deleted successfully!', 'success')
+    except Exception as e:
+        flash(f'Error deleting lesson: {e}', 'error')
+    return redirect(url_for('lessons'))
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)

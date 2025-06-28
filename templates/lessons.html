@@ -59,8 +59,8 @@
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete this lesson? This action cannot be undone.</p>
-                <p>Please type the lesson title to confirm:</p>
-                <input type="text" class="form-control" id="confirmLessonTitle" placeholder="Enter lesson title">
+                <p>Please enter your admin password to confirm:</p>
+                <input type="password" class="form-control" id="adminPasswordConfirm" placeholder="Enter admin password">
                 <input type="hidden" id="lessonIdToDelete">
             </div>
             <div class="modal-footer">
@@ -79,20 +79,18 @@ $(document).ready(function() {
         var lessonTitle = button.data('lesson-title');
         var modal = $(this);
         modal.find('#lessonIdToDelete').val(lessonId);
-        modal.find('#confirmLessonTitle').val('');
+        modal.find('#adminPasswordConfirm').val('');
         modal.find('#confirmDelete').prop('disabled', true);
     });
 
-    $('#confirmLessonTitle').on('input', function() {
-        var button = $(event.relatedTarget);
-        var lessonTitle = button.data('lesson-title');
-        var confirmButton = $('#confirmDelete');
-        confirmButton.prop('disabled', $(this).val() !== lessonTitle);
+    $('#adminPasswordConfirm').on('input', function() {
+        $('#confirmDelete').prop('disabled', !$(this).val());
     });
 
     $('#confirmDelete').on('click', function() {
         var lessonId = $('#lessonIdToDelete').val();
-        window.location.href = '/delete_lesson/' + lessonId;
+        var password = $('#adminPasswordConfirm').val();
+        window.location.href = '/delete_lesson/' + lessonId + '?password=' + encodeURIComponent(password);
     });
 });
 </script>
