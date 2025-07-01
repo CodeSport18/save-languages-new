@@ -1,11 +1,10 @@
 /* Kashmiri Theme Styles */
 
 :root {
-  --kashmiri-red: #8B0000;
-  --kashmiri-gold: #DAA520;
+  --kashmiri-red: #ede4e4;
   --kashmiri-green: #006400;
   --kashmiri-blue: #00008B;
-  --kashmiri-cream: #FFF8DC;
+  --kashmiri-cream: #000000;
 }
 
 body {
