@@ -1,249 +1,97 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container-fluid">
-  <!-- Header Section -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-gradient-primary text-white">
-        <div class="card-body p-4">
-          <div class="row align-items-center">
-            <div class="col-md-8">
-              <h1 class="mb-2">
-                <i class="fas fa-book me-3"></i>Available Lessons
-              </h1>
-              <p class="mb-0 opacity-75">Explore our comprehensive collection of language learning lessons</p>
-            </div>
-            <div class="col-md-4 text-md-end">
-              <div class="d-flex justify-content-md-end">
-                <div class="text-center me-4">
-                  <div class="h3 mb-0">{{ lessons|length if lessons else 0 }}</div>
-                  <small class="opacity-75">Total Lessons</small>
-                </div>
-                <div class="text-center">
-                  <div class="h3 mb-0">
-                    {% if session.is_admin %}
-                      <i class="fas fa-crown text-warning"></i>
-                    {% else %}
-                      <i class="fas fa-user text-light"></i>
-                    {% endif %}
-                  </div>
-                  <small class="opacity-75">
-                    {% if session.is_admin %}Admin{% else %}Student{% endif %}
-                  </small>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+<div class="container mt-4">
+    <h2>Available Lessons</h2>
 
-  <!-- Lessons Grid -->
-  <div class="row">
-    {% if lessons %}
-      {% for lesson in lessons %}
-        <div class="col-lg-4 col-md-6 mb-4">
-          <div class="card h-100 hover-lift">
-            <div class="card-header">
-              <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                  <i class="fas fa-book-open me-2"></i>{{ lesson.title }}
-                </h5>
-                <span class="badge bg-primary">
-                  <i class="fas fa-play me-1"></i>Lesson
-                </span>
-              </div>
-            </div>
-            <div class="card-body d-flex flex-column">
-              <div class="mb-3">
-                <p class="text-muted mb-2">
-                  <i class="fas fa-calendar me-2"></i>
-                  <strong>Created:</strong> 
-                  {% if lesson.date_created and lesson.date_created.strftime %}
-                    {{ lesson.date_created.strftime('%B %d, %Y') }}
-                  {% else %}
-                    {{ lesson.date_created }}
-                  {% endif %}
-                </p>
-                {% if lesson.slides %}
-                  <p class="text-muted mb-2">
-                    <i class="fas fa-images me-2"></i>
-                    <strong>Slides:</strong> {{ lesson.slides|length }}
-                  </p>
-                {% endif %}
-                {% if lesson.quiz %}
-                  <p class="text-muted mb-2">
-                    <i class="fas fa-question-circle me-2"></i>
-                    <strong>Quiz:</strong> {{ lesson.quiz.questions|length }} questions
-                  </p>
-                {% endif %}
-              </div>
-              <div class="mt-auto">
-                <div class="d-grid gap-2">
-                  <a href="{{ url_for('lesson_detail', lesson_id=lesson._id) }}" 
-                     class="btn btn-primary">
-                    <i class="fas fa-play me-2"></i>Start Lesson
-                  </a>
-                  {% if session.get('is_admin') %}
-                    <button type="button" 
-                            class="btn btn-outline-danger btn-sm" 
-                            data-bs-toggle="modal" 
-                            data-bs-target="#deleteModal" 
-                            data-lesson-id="{{ lesson._id }}" 
-                            data-lesson-title="{{ lesson.title }}">
-                      <i class="fas fa-trash me-2"></i>Delete Lesson
-                    </button>
-                  {% endif %}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      {% endfor %}
-    {% else %}
-      <div class="col-12">
-        <div class="card">
-          <div class="card-body text-center py-5">
-            <i class="fas fa-book-open fa-4x text-muted mb-4"></i>
-            <h3 class="text-muted mb-3">No Lessons Available</h3>
-            <p class="text-muted mb-4">There are currently no lessons available. Please check back later or contact an administrator.</p>
-            {% if session.is_admin %}
-              <a href="/create_lesson" class="btn btn-primary btn-lg">
-                <i class="fas fa-plus me-2"></i>Create First Lesson
-              </a>
-            {% else %}
-              <a href="/dashboard" class="btn btn-primary btn-lg">
-                <i class="fas fa-home me-2"></i>Back to Dashboard
-              </a>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-    {% endif %}
-  </div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
 
-  <!-- Admin Actions -->
-  {% if session.get('is_admin') %}
-    <div class="row mt-4">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0">
-              <i class="fas fa-tools me-2"></i>Admin Actions
-            </h5>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <a href="/create_lesson" class="btn btn-success w-100 py-3">
-                  <i class="fas fa-plus-circle fa-2x mb-2 d-block"></i>
-                  <span class="d-block">Create New Lesson</span>
-                </a>
-              </div>
-              <div class="col-md-6 mb-3">
-                <a href="/create_quiz" class="btn btn-info w-100 py-3">
-                  <i class="fas fa-question-circle fa-2x mb-2 d-block"></i>
-                  <span class="d-block">Create New Quiz</span>
-                </a>
-              </div>
+    <div class="row">
+        {% if lessons %}
+            {% for lesson in lessons %}
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ lesson.title }}</h5>
+                            <p class="card-text text-muted">
+                                Created on:
+                                {% if lesson.date_created and lesson.date_created.strftime %}
+                                    {{ lesson.date_created.strftime('%B %d, %Y') }}
+                                {% else %}
+                                    {{ lesson.date_created }}
+                                {% endif %}
+                            </p>
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ url_for('lesson_detail', lesson_id=lesson._id) }}" class="btn btn-primary">Start Lesson</a>
+                                {% if session.get('is_admin') %}
+                                    <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteModal" data-lesson-id="{{ lesson._id }}" data-lesson-title="{{ lesson.title }}">
+                                        Delete Lesson
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="col">
+                <p>No lessons available yet.</p>
             </div>
-          </div>
-        </div>
-      </div>
+        {% endif %}
     </div>
-  {% endif %}
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="deleteModalLabel">
-          <i class="fas fa-exclamation-triangle text-warning me-2"></i>Delete Lesson
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="alert alert-warning">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          <strong>Warning:</strong> This action cannot be undone!
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Delete Lesson</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this lesson? This action cannot be undone.</p>
+                <p>Please enter your admin password to confirm:</p>
+                <input type="password" class="form-control" id="adminPasswordConfirm" placeholder="Enter admin password">
+                <input type="hidden" id="lessonIdToDelete">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete" disabled>Delete</button>
+            </div>
         </div>
-        <p>Are you sure you want to delete the lesson "<strong id="lessonTitleToDelete"></strong>"?</p>
-        <p>This will permanently remove the lesson and all associated content.</p>
-        <div class="mb-3">
-          <label for="adminPasswordConfirm" class="form-label">
-            <i class="fas fa-lock me-2"></i>Admin Password
-          </label>
-          <input type="password" 
-                 class="form-control" 
-                 id="adminPasswordConfirm" 
-                 placeholder="Enter your admin password">
-          <div class="form-text">Enter your admin password to confirm deletion</div>
-        </div>
-        <input type="hidden" id="lessonIdToDelete">
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          <i class="fas fa-times me-2"></i>Cancel
-        </button>
-        <button type="button" class="btn btn-danger" id="confirmDelete" disabled>
-          <i class="fas fa-trash me-2"></i>Delete Lesson
-        </button>
-      </div>
     </div>
-  </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Delete modal functionality
-  const deleteModal = document.getElementById('deleteModal');
-  const lessonIdToDelete = document.getElementById('lessonIdToDelete');
-  const lessonTitleToDelete = document.getElementById('lessonTitleToDelete');
-  const adminPasswordConfirm = document.getElementById('adminPasswordConfirm');
-  const confirmDelete = document.getElementById('confirmDelete');
-
-  deleteModal.addEventListener('show.bs.modal', function(event) {
-    const button = event.relatedTarget;
-    const lessonId = button.getAttribute('data-lesson-id');
-    const lessonTitle = button.getAttribute('data-lesson-title');
-    
-    lessonIdToDelete.value = lessonId;
-    lessonTitleToDelete.textContent = lessonTitle;
-    adminPasswordConfirm.value = '';
-    confirmDelete.disabled = true;
-  });
-
-  adminPasswordConfirm.addEventListener('input', function() {
-    confirmDelete.disabled = !this.value.trim();
-  });
-
-  confirmDelete.addEventListener('click', function() {
-    const lessonId = lessonIdToDelete.value;
-    const password = adminPasswordConfirm.value;
-    window.location.href = `/delete_lesson/${lessonId}?password=${encodeURIComponent(password)}`;
-  });
-
-  // Add animation to lesson cards
-  const cards = document.querySelectorAll('.card');
-  cards.forEach((card, index) => {
-    card.style.animationDelay = `${index * 0.1}s`;
-    card.classList.add('animate-fade-in-up');
-  });
-
-  // Add hover effects
-  const lessonCards = document.querySelectorAll('.card.hover-lift');
-  lessonCards.forEach(card => {
-    card.addEventListener('mouseenter', function() {
-      this.style.transform = 'translateY(-8px)';
+$(document).ready(function() {
+    $('#deleteModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var lessonId = button.data('lesson-id');
+        var lessonTitle = button.data('lesson-title');
+        var modal = $(this);
+        modal.find('#lessonIdToDelete').val(lessonId);
+        modal.find('#adminPasswordConfirm').val('');
+        modal.find('#confirmDelete').prop('disabled', true);
     });
-    card.addEventListener('mouseleave', function() {
-      this.style.transform = 'translateY(0)';
+
+    $('#adminPasswordConfirm').on('input', function() {
+        $('#confirmDelete').prop('disabled', !$(this).val());
     });
-  });
+
+    $('#confirmDelete').on('click', function() {
+        var lessonId = $('#lessonIdToDelete').val();
+        var password = $('#adminPasswordConfirm').val();
+        window.location.href = '/delete_lesson/' + lessonId + '?password=' + encodeURIComponent(password);
+    });
 });
 </script>
 {% endblock %} 
