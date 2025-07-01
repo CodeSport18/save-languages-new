@@ -1,31 +1,144 @@
 {% extends "base.html" %}
 {% block title %}{{ t.register }}{% endblock %}
 {% block content %}
-  <div class="row justify-content-center">
-    <div class="col-md-6">
-      <div class="card">
-        <div class="card-header">
-          <h2 class="text-center mb-0">{{ t.register }}</h2>
+<div class="row justify-content-center align-items-center min-vh-100">
+  <div class="col-md-6 col-lg-4">
+    <div class="card animate-fade-in-up">
+      <div class="card-header text-center">
+        <div class="mb-3">
+          <i class="fas fa-user-plus fa-3x text-white"></i>
         </div>
-        <div class="card-body">
-          <form method="post" action="{{ url_for('register') }}">
-            <div class="form-group">
-              <label for="username">Username</label>
-              <input type="text" class="form-control" name="username" id="username" required>
+        <h2 class="mb-0">{{ t.register }}</h2>
+        <p class="mb-0 opacity-75">Create your account to get started</p>
+      </div>
+      <div class="card-body p-4">
+        <form method="post" action="{{ url_for('register') }}" class="needs-validation" novalidate>
+          <div class="mb-3">
+            <label for="username" class="form-label">
+              <i class="fas fa-user me-2"></i>Username
+            </label>
+            <input type="text" 
+                   class="form-control" 
+                   name="username" 
+                   id="username" 
+                   placeholder="Choose a username"
+                   required
+                   minlength="3"
+                   maxlength="20">
+            <div class="form-text">Username must be 3-20 characters long</div>
+            <div class="invalid-feedback">
+              Please choose a valid username (3-20 characters).
             </div>
-            <div class="form-group">
-              <label for="password">Password</label>
-              <input type="password" class="form-control" name="password" id="password" required>
-            </div>
-            <div class="text-center">
-              <button type="submit" class="btn btn-primary">{{ t.register }}</button>
-            </div>
-          </form>
-          <div class="text-center mt-3">
-            <p>Already have an account? <a href="{{ url_for('login') }}">{{ t.login }}</a></p>
           </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">
+              <i class="fas fa-lock me-2"></i>Password
+            </label>
+            <div class="input-group">
+              <input type="password" 
+                     class="form-control" 
+                     name="password" 
+                     id="password" 
+                     placeholder="Create a strong password"
+                     required
+                     minlength="6">
+              <button class="btn btn-outline-secondary" 
+                      type="button" 
+                      id="togglePassword">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
+            <div class="form-text">Password must be at least 6 characters long</div>
+            <div class="invalid-feedback">
+              Please create a password (minimum 6 characters).
+            </div>
+          </div>
+          <div class="mb-4">
+            <label for="confirmPassword" class="form-label">
+              <i class="fas fa-lock me-2"></i>Confirm Password
+            </label>
+            <div class="input-group">
+              <input type="password" 
+                     class="form-control" 
+                     name="confirmPassword" 
+                     id="confirmPassword" 
+                     placeholder="Confirm your password"
+                     required>
+              <button class="btn btn-outline-secondary" 
+                      type="button" 
+                      id="toggleConfirmPassword">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
+            <div class="invalid-feedback">
+              Passwords do not match.
+            </div>
+          </div>
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary btn-lg">
+              <i class="fas fa-user-plus me-2"></i>{{ t.register }}
+            </button>
+          </div>
+        </form>
+        <div class="text-center mt-4">
+          <p class="mb-0">
+            Already have an account? 
+            <a href="{{ url_for('login') }}" class="text-decoration-none fw-bold">
+              {{ t.login }}
+            </a>
+          </p>
         </div>
       </div>
     </div>
   </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Password toggle functionality
+  const togglePassword = document.getElementById('togglePassword');
+  const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
+  const password = document.getElementById('password');
+  const confirmPassword = document.getElementById('confirmPassword');
+  
+  togglePassword.addEventListener('click', function() {
+    const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+    password.setAttribute('type', type);
+    this.querySelector('i').classList.toggle('fa-eye');
+    this.querySelector('i').classList.toggle('fa-eye-slash');
+  });
+  
+  toggleConfirmPassword.addEventListener('click', function() {
+    const type = confirmPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+    confirmPassword.setAttribute('type', type);
+    this.querySelector('i').classList.toggle('fa-eye');
+    this.querySelector('i').classList.toggle('fa-eye-slash');
+  });
+  
+  // Password confirmation validation
+  function validatePasswordMatch() {
+    if (password.value !== confirmPassword.value) {
+      confirmPassword.setCustomValidity('Passwords do not match');
+    } else {
+      confirmPassword.setCustomValidity('');
+    }
+  }
+  
+  password.addEventListener('change', validatePasswordMatch);
+  confirmPassword.addEventListener('keyup', validatePasswordMatch);
+  
+  // Form validation
+  const form = document.querySelector('.needs-validation');
+  form.addEventListener('submit', function(event) {
+    if (!form.checkValidity()) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    form.classList.add('was-validated');
+  });
+  
+  // Auto-focus on username field
+  document.getElementById('username').focus();
+});
+</script>
 {% endblock %}

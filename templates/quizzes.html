@@ -1,47 +1,236 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>{{ t.available_quizzes }}</h2>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
-    <div class="row">
-        {% if quizzes %}
-            {% for quiz in quizzes %}
-                <div class="col-md-6 mb-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ quiz.title }}</h5>
-                            <p class="card-text text-muted">
-                                Questions: {{ quiz.questions|length }}
-                                {% if quiz._id|string in completed_quizzes %}
-                                    <span class="badge bg-success">Completed</span>
-                                {% endif %}
-                            </p>
-                            <small class="text-muted d-block mb-2">Created on: {{ quiz.date_created.strftime('%B %d, %Y') }}</small>
-                            <a href="{{ url_for('take_quiz', quiz_id=quiz._id) }}" class="btn btn-primary">
-                                {% if quiz._id|string in completed_quizzes %}
-                                    Retake Quiz
-                                {% else %}
-                                    Start Quiz
-                                {% endif %}
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
-        {% else %}
-            <div class="col">
-                <p>No quizzes available yet.</p>
+<div class="container-fluid">
+  <!-- Header Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-gradient-success text-white">
+        <div class="card-body p-4">
+          <div class="row align-items-center">
+            <div class="col-md-8">
+              <h1 class="mb-2">
+                <i class="fas fa-question-circle me-3"></i>{{ t.available_quizzes }}
+              </h1>
+              <p class="mb-0 opacity-75">Test your knowledge and track your progress with our interactive quizzes</p>
             </div>
-        {% endif %}
+            <div class="col-md-4 text-md-end">
+              <div class="d-flex justify-content-md-end">
+                <div class="text-center me-4">
+                  <div class="h3 mb-0">{{ quizzes|length if quizzes else 0 }}</div>
+                  <small class="opacity-75">Total Quizzes</small>
+                </div>
+                <div class="text-center">
+                  <div class="h3 mb-0">
+                    {% if completed_quizzes %}
+                      {{ completed_quizzes|length }}
+                    {% else %}
+                      0
+                    {% endif %}
+                  </div>
+                  <small class="opacity-75">Completed</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
+
+  <!-- Quizzes Grid -->
+  <div class="row">
+    {% if quizzes %}
+      {% for quiz in quizzes %}
+        <div class="col-lg-4 col-md-6 mb-4">
+          <div class="card h-100 hover-lift">
+            <div class="card-header">
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                  <i class="fas fa-question-circle me-2"></i>{{ quiz.title }}
+                </h5>
+                {% if quiz._id|string in completed_quizzes %}
+                  <span class="badge bg-success">
+                    <i class="fas fa-check me-1"></i>Completed
+                  </span>
+                {% else %}
+                  <span class="badge bg-primary">
+                    <i class="fas fa-play me-1"></i>Available
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="card-body d-flex flex-column">
+              <div class="mb-3">
+                <p class="text-muted mb-2">
+                  <i class="fas fa-list-ol me-2"></i>
+                  <strong>Questions:</strong> {{ quiz.questions|length }}
+                </p>
+                <p class="text-muted mb-2">
+                  <i class="fas fa-calendar me-2"></i>
+                  <strong>Created:</strong> 
+                  {% if quiz.date_created and quiz.date_created.strftime %}
+                    {{ quiz.date_created.strftime('%B %d, %Y') }}
+                  {% else %}
+                    {{ quiz.date_created }}
+                  {% endif %}
+                </p>
+                {% if quiz._id|string in completed_quizzes %}
+                  <p class="text-muted mb-2">
+                    <i class="fas fa-star me-2"></i>
+                    <strong>Status:</strong> 
+                    <span class="text-success">Completed</span>
+                  </p>
+                {% else %}
+                  <p class="text-muted mb-2">
+                    <i class="fas fa-clock me-2"></i>
+                    <strong>Status:</strong> 
+                    <span class="text-primary">Ready to take</span>
+                  </p>
+                {% endif %}
+              </div>
+              <div class="mt-auto">
+                <div class="d-grid">
+                  <a href="{{ url_for('take_quiz', quiz_id=quiz._id) }}" 
+                     class="btn {% if quiz._id|string in completed_quizzes %}btn-outline-success{% else %}btn-success{% endif %}">
+                    <i class="fas fa-{% if quiz._id|string in completed_quizzes %}redo{% else %}play{% endif %} me-2"></i>
+                    {% if quiz._id|string in completed_quizzes %}
+                      Retake Quiz
+                    {% else %}
+                      Start Quiz
+                    {% endif %}
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body text-center py-5">
+            <i class="fas fa-question-circle fa-4x text-muted mb-4"></i>
+            <h3 class="text-muted mb-3">No Quizzes Available</h3>
+            <p class="text-muted mb-4">There are currently no quizzes available. Please check back later or contact an administrator.</p>
+            {% if session.is_admin %}
+              <a href="/create_quiz" class="btn btn-success btn-lg">
+                <i class="fas fa-plus me-2"></i>Create First Quiz
+              </a>
+            {% else %}
+              <a href="/dashboard" class="btn btn-primary btn-lg">
+                <i class="fas fa-home me-2"></i>Back to Dashboard
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Progress Section -->
+  {% if completed_quizzes and completed_quizzes|length > 0 %}
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-chart-line me-2"></i>Your Quiz Progress
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <div class="text-center">
+                  <div class="h2 text-success mb-1">{{ completed_quizzes|length }}</div>
+                  <p class="text-muted mb-0">Quizzes Completed</p>
+                </div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <div class="text-center">
+                  <div class="h2 text-primary mb-1">{{ quizzes|length - completed_quizzes|length }}</div>
+                  <p class="text-muted mb-0">Quizzes Remaining</p>
+                </div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <div class="text-center">
+                  <div class="h2 text-warning mb-1">
+                    {{ "%.1f"|format((completed_quizzes|length / quizzes|length) * 100) }}%
+                  </div>
+                  <p class="text-muted mb-0">Completion Rate</p>
+                </div>
+              </div>
+            </div>
+            <div class="progress mt-3" style="height: 10px;">
+              <div class="progress-bar bg-success" 
+                   style="width: {{ (completed_quizzes|length / quizzes|length) * 100 }}%">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Admin Actions -->
+  {% if session.get('is_admin') %}
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-tools me-2"></i>Admin Actions
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <a href="/create_quiz" class="btn btn-success w-100 py-3">
+                  <i class="fas fa-plus-circle fa-2x mb-2 d-block"></i>
+                  <span class="d-block">Create New Quiz</span>
+                </a>
+              </div>
+              <div class="col-md-6 mb-3">
+                <a href="/create_lesson" class="btn btn-primary w-100 py-3">
+                  <i class="fas fa-book fa-2x mb-2 d-block"></i>
+                  <span class="d-block">Create New Lesson</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Add animation to quiz cards
+  const cards = document.querySelectorAll('.card');
+  cards.forEach((card, index) => {
+    card.style.animationDelay = `${index * 0.1}s`;
+    card.classList.add('animate-fade-in-up');
+  });
+  
+  // Add hover effects
+  const quizCards = document.querySelectorAll('.card.hover-lift');
+  quizCards.forEach(card => {
+    card.addEventListener('mouseenter', function() {
+      this.style.transform = 'translateY(-8px)';
+    });
+    card.addEventListener('mouseleave', function() {
+      this.style.transform = 'translateY(0)';
+    });
+  });
+  
+  // Add progress bar animation
+  const progressBar = document.querySelector('.progress-bar');
+  if (progressBar) {
+    setTimeout(() => {
+      progressBar.style.transition = 'width 1s ease-in-out';
+    }, 500);
+  }
+});
+</script>
 {% endblock %} 
