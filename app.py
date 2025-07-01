@@ -34,9 +34,13 @@ S3_BUCKET = os.environ.get('S3_BUCKET')
 S3_BASE_URL = f"https://{S3_BUCKET}.s3.amazonaws.com"
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_AUDIO_EXTENSIONS = {'mp3', 'wav', 'm4a', 'ogg', 'webm'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def allowed_audio_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_AUDIO_EXTENSIONS
 
 def upload_to_s3(file, filename):
     try:
@@ -159,13 +163,15 @@ def create_lesson():
         # Get slides with new structure
         slide_contents = request.form.getlist('slide_content')
         slide_image_urls = request.form.getlist('slide_image_url')
+        slide_audio_urls = request.form.getlist('slide_audio_url')
         
-        # Create slides array with image and content
+        # Create slides array with image, content, and audio
         slides = []
         for i in range(len(slide_contents)):
             slide = {
                 'content': slide_contents[i] if slide_contents[i] else None,
-                'image_url': slide_image_urls[i] if slide_image_urls[i] else None
+                'image_url': slide_image_urls[i] if slide_image_urls[i] else None,
+                'audio_url': slide_audio_urls[i] if i < len(slide_audio_urls) and slide_audio_urls[i] else None
             }
             slides.append(slide)
         
@@ -276,6 +282,24 @@ def upload_inline_image():
     
     print(file,filename)
     
+    return jsonify({'success': False, 'error': 'Invalid file type'})
+
+@app.route('/upload_inline_audio', methods=['POST'])
+@login_required
+def upload_inline_audio():
+    if 'audio' not in request.files:
+        return jsonify({'success': False, 'error': 'No audio file provided'})
+    file = request.files['audio']
+    if file.filename == '':
+        return jsonify({'success': False, 'error': 'No selected file'})
+    if file and allowed_audio_file(file.filename):
+        filename = secure_filename(file.filename)
+        filename = f"{int(time.time())}_{filename}"
+        s3_url = upload_to_s3(file, filename)
+        if s3_url:
+            return jsonify({'success': True, 'filename': filename, 'url': s3_url})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to upload audio to S3'})
     return jsonify({'success': False, 'error': 'Invalid file type'})
 
 @app.route('/delete_lesson/<lesson_id>')

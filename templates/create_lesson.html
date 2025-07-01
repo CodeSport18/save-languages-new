@@ -43,6 +43,16 @@
                             <div class="form-control slide-content rich-editor" contenteditable="true" data-placeholder="{{ t.type_your_content_here }}" style="min-height: 150px; max-height: 400px; overflow-y: auto;"></div>
                         <textarea class="form-control slide-content-hidden" name="slide_content" style="display: none;"></textarea>
                         </div>
+                        <!-- Audio Upload Section for static first slide -->
+                        <div class="slide-audio-section mb-3">
+                            <label class="form-label fw-bold">{{ t.slide_audio if t.slide_audio else 'Audio (How to say this sentence)' }}</label>
+                            <div class="audio-upload-area d-flex align-items-center gap-2">
+                                <input type="file" class="slide-audio-input" accept="audio/*" onchange="handleAudioUpload(this, 0)">
+                                <button type="button" class="btn btn-outline-primary btn-sm ml-2" onclick="openRecordModal(0)"><i class="fas fa-microphone"></i> Record Audio</button>
+                                <input type="hidden" name="slide_audio_url" class="slide-audio-url">
+                                <div class="audio-preview" style="display:none;"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -102,6 +112,30 @@
             </form>
         </div>
     </div>
+</div>
+
+<!-- Audio Recording Modal -->
+<div class="modal fade" id="audioRecordModal" tabindex="-1" role="dialog" aria-labelledby="audioRecordModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="audioRecordModalLabel">Record Audio</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body text-center">
+        <p id="recordingStatus">Click the button to start recording.</p>
+        <button id="startRecordingBtn" class="btn btn-danger mb-2"><i class="fas fa-microphone"></i> Start Recording</button>
+        <button id="stopRecordingBtn" class="btn btn-secondary mb-2" style="display:none;"><i class="fas fa-stop"></i> Stop</button>
+        <div id="recordedAudioPreview" class="mt-3" style="display:none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="saveRecordingBtn" style="display:none;">Save to Slide</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <style>
@@ -292,6 +326,8 @@ let recordingStartTime;
 let recordingTimer;
 let wavesurfer;
 let playbackWavesurfer;
+let currentAudioSlideIndex = 0;
+let recordedChunks = [];
 
 // Initialize WaveSurfer.js
 function initWaveSurfer() {
@@ -436,6 +472,15 @@ function addSlide() {
             <label class="form-label fw-bold">${t.slide_content || 'Slide Content'}</label>
             <div class="form-control slide-content rich-editor" contenteditable="true" data-placeholder="${t.type_your_content_here || 'Type your content here...'}" style="min-height: 150px; max-height: 400px; overflow-y: auto;"></div>
         <textarea class="form-control slide-content-hidden" name="slide_content" style="display: none;"></textarea>
+        </div>
+        <!-- Audio Upload Section -->
+        <div class="slide-audio-section mb-3">
+            <label class="form-label fw-bold">${t.slide_audio || 'Audio (How to say this sentence)'}</label>
+            <div class="audio-upload-area">
+                <input type="file" class="slide-audio-input" accept="audio/*" onchange="handleAudioUpload(this, ${slideCount - 1})">
+                <input type="hidden" name="slide_audio_url" class="slide-audio-url">
+                <div class="audio-preview" style="display:none;"></div>
+            </div>
         </div>
     `;
     
@@ -647,5 +692,105 @@ document.getElementById('lessonForm').addEventListener('submit', function(e) {
         }
     });
 });
+
+async function handleAudioUpload(input, slideIndex) {
+    const file = input.files[0];
+    if (!file) return;
+    const slideEditor = input.closest('.slide-editor');
+    const formData = new FormData();
+    formData.append('audio', file);
+    // Show loading state
+                                const audioPreview = slideEditor.querySelector('.audio-preview');
+    audioPreview.style.display = 'block';
+    audioPreview.innerHTML = '<span><i class="fas fa-spinner fa-spin"></i> Uploading...</span>';
+    try {
+        const response = await fetch('/upload_inline_audio', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        if (data.success) {
+            // Store the URL
+            slideEditor.querySelector('.slide-audio-url').value = data.url;
+            // Show audio preview
+            audioPreview.innerHTML = `<audio controls src="${data.url}"></audio>`;
+        } else {
+            audioPreview.innerHTML = `<span class='text-danger'>${data.error || 'Failed to upload audio'}</span>`;
+        }
+    } catch (error) {
+        audioPreview.innerHTML = `<span class='text-danger'>Error uploading audio. Please try again.</span>`;
+    }
+}
+
+function openRecordModal(slideIndex) {
+    currentAudioSlideIndex = slideIndex;
+    $('#audioRecordModal').modal('show');
+    document.getElementById('recordingStatus').textContent = 'Click the button to start recording.';
+    document.getElementById('startRecordingBtn').style.display = '';
+    document.getElementById('stopRecordingBtn').style.display = 'none';
+    document.getElementById('saveRecordingBtn').style.display = 'none';
+    document.getElementById('recordedAudioPreview').style.display = 'none';
+    document.getElementById('recordedAudioPreview').innerHTML = '';
+}
+
+document.getElementById('startRecordingBtn').onclick = async function() {
+    recordedChunks = [];
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Audio recording is not supported in this browser or context. Please use a modern browser over HTTPS or localhost.');
+        return;
+    }
+    let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = function(e) {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+    mediaRecorder.onstop = function() {
+        let blob = new Blob(recordedChunks, { type: 'audio/webm' });
+        let url = URL.createObjectURL(blob);
+        let preview = document.getElementById('recordedAudioPreview');
+        preview.innerHTML = `<audio controls src="${url}"></audio>`;
+        preview.style.display = 'block';
+        document.getElementById('saveRecordingBtn').style.display = '';
+    };
+    mediaRecorder.start();
+    document.getElementById('recordingStatus').textContent = 'Recording...';
+    this.style.display = 'none';
+    document.getElementById('stopRecordingBtn').style.display = '';
+};
+
+document.getElementById('stopRecordingBtn').onclick = function() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        document.getElementById('recordingStatus').textContent = 'Recording stopped.';
+        this.style.display = 'none';
+    }
+};
+
+document.getElementById('saveRecordingBtn').onclick = async function() {
+    let blob = new Blob(recordedChunks, { type: 'audio/webm' });
+    let formData = new FormData();
+    formData.append('audio', blob, 'recording.webm');
+    let slideEditors = document.querySelectorAll('.slide-editor');
+    let slideEditor = slideEditors[currentAudioSlideIndex];
+    let audioPreview = slideEditor.querySelector('.audio-preview');
+    audioPreview.style.display = 'block';
+    audioPreview.innerHTML = '<span><i class="fas fa-spinner fa-spin"></i> Uploading...</span>';
+    try {
+        const response = await fetch('/upload_inline_audio', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        if (data.success) {
+            slideEditor.querySelector('.slide-audio-url').value = data.url;
+            audioPreview.innerHTML = `<audio controls src="${data.url}"></audio>`;
+        } else {
+            audioPreview.innerHTML = `<span class='text-danger'>${data.error || 'Failed to upload audio'}</span>`;
+        }
+    } catch (error) {
+        audioPreview.innerHTML = `<span class='text-danger'>Error uploading audio. Please try again.</span>`;
+    }
+    $('#audioRecordModal').modal('hide');
+};
 </script>
 {% endblock %}
