@@ -18,7 +18,7 @@ app.secret_key = os.environ.get('SECRET_KEY', '!hUcAZCNrL-HM&-')
 
 # MongoDB connection
 mongo_uri = os.environ.get('MONGO_URI')
-client = MongoClient(mongo_uri)
+client = MongoClient(mongo_uri, tlsAllowInvalidCertificates=True)
 db = client['koshur']
 lessons_collection = db['lessons']
 users_collection = db['users']
