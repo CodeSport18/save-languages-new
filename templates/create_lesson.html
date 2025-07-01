@@ -117,25 +117,26 @@
 <!-- Audio Recording Modal -->
 <div class="modal fade" id="audioRecordModal" tabindex="-1" role="dialog" aria-labelledby="audioRecordModalLabel" aria-hidden="true">
   <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
+        <div class="modal-content">
+            <div class="modal-header">
         <h5 class="modal-title" id="audioRecordModalLabel">Record Audio</h5>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body text-center">
+                </button>
+            </div>
+            <div class="modal-body text-center">
         <p id="recordingStatus">Click the button to start recording.</p>
         <button id="startRecordingBtn" class="btn btn-danger mb-2"><i class="fas fa-microphone"></i> Start Recording</button>
         <button id="stopRecordingBtn" class="btn btn-secondary mb-2" style="display:none;"><i class="fas fa-stop"></i> Stop</button>
+        <div id="recordingWaveform" style="width:100%;height:80px;"></div>
         <div id="recordedAudioPreview" class="mt-3" style="display:none;"></div>
-      </div>
-      <div class="modal-footer">
+            </div>
+            <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
         <button type="button" class="btn btn-primary" id="saveRecordingBtn" style="display:none;">Save to Slide</button>
-      </div>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
 <style>
@@ -296,6 +297,8 @@
 }
 </style>
 
+<script src="https://unpkg.com/wavesurfer.js"></script>
+
 <script>
 const t = {
     slide: "{{ t.slide }}",
@@ -328,6 +331,8 @@ let wavesurfer;
 let playbackWavesurfer;
 let currentAudioSlideIndex = 0;
 let recordedChunks = [];
+let recordingWaveSurfer = null;
+let playbackWaveSurfer = null;
 
 // Initialize WaveSurfer.js
 function initWaveSurfer() {
@@ -712,14 +717,30 @@ async function handleAudioUpload(input, slideIndex) {
         if (data.success) {
             // Store the URL
             slideEditor.querySelector('.slide-audio-url').value = data.url;
-            // Show audio preview
-            audioPreview.innerHTML = `<audio controls src="${data.url}"></audio>`;
+            // Show waveform preview
+            audioPreview.innerHTML = `<div id='uploadedWaveform${slideIndex}' style='width:100%;height:80px;'></div><button class='btn btn-sm btn-secondary mt-2' onclick='playUploadedWaveform(${slideIndex})'><i class="fas fa-play"></i> Play</button>`;
+            setTimeout(() => {
+                let ws = WaveSurfer.create({
+                    container: `#uploadedWaveform${slideIndex}`,
+                    waveColor: '#4F4A85',
+                    progressColor: '#383351',
+                    height: 80,
+                    responsive: true
+        });
+                ws.load(data.url);
+                window['uploadedWaveSurfer' + slideIndex] = ws;
+            }, 100);
         } else {
             audioPreview.innerHTML = `<span class='text-danger'>${data.error || 'Failed to upload audio'}</span>`;
         }
     } catch (error) {
         audioPreview.innerHTML = `<span class='text-danger'>Error uploading audio. Please try again.</span>`;
     }
+}
+
+function playUploadedWaveform(idx) {
+    let ws = window['uploadedWaveSurfer' + idx];
+    if (ws) ws.playPause();
 }
 
 function openRecordModal(slideIndex) {
@@ -731,6 +752,8 @@ function openRecordModal(slideIndex) {
     document.getElementById('saveRecordingBtn').style.display = 'none';
     document.getElementById('recordedAudioPreview').style.display = 'none';
     document.getElementById('recordedAudioPreview').innerHTML = '';
+    document.getElementById('recordingWaveform').innerHTML = '';
+    if (recordingWaveSurfer) { recordingWaveSurfer.destroy(); recordingWaveSurfer = null; }
 }
 
 document.getElementById('startRecordingBtn').onclick = async function() {
@@ -748,49 +771,57 @@ document.getElementById('startRecordingBtn').onclick = async function() {
         let blob = new Blob(recordedChunks, { type: 'audio/webm' });
         let url = URL.createObjectURL(blob);
         let preview = document.getElementById('recordedAudioPreview');
-        preview.innerHTML = `<audio controls src="${url}"></audio>`;
+        preview.innerHTML = `<div id='playbackWaveform' style='width:100%;height:80px;'></div><button class='btn btn-sm btn-secondary mt-2' onclick='playWaveform()'><i class="fas fa-play"></i> Play</button>`;
         preview.style.display = 'block';
         document.getElementById('saveRecordingBtn').style.display = '';
+        // Initialize playback waveform
+        setTimeout(() => {
+            if (playbackWaveSurfer) { playbackWaveSurfer.destroy(); }
+            playbackWaveSurfer = WaveSurfer.create({
+                container: '#playbackWaveform',
+                waveColor: '#4F4A85',
+                progressColor: '#383351',
+                height: 80,
+                responsive: true
+            });
+            playbackWaveSurfer.load(url);
+        }, 100);
     };
     mediaRecorder.start();
     document.getElementById('recordingStatus').textContent = 'Recording...';
     this.style.display = 'none';
     document.getElementById('stopRecordingBtn').style.display = '';
-};
-
-document.getElementById('stopRecordingBtn').onclick = function() {
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-        mediaRecorder.stop();
-        document.getElementById('recordingStatus').textContent = 'Recording stopped.';
-        this.style.display = 'none';
-    }
-};
-
-document.getElementById('saveRecordingBtn').onclick = async function() {
-    let blob = new Blob(recordedChunks, { type: 'audio/webm' });
-    let formData = new FormData();
-    formData.append('audio', blob, 'recording.webm');
-    let slideEditors = document.querySelectorAll('.slide-editor');
-    let slideEditor = slideEditors[currentAudioSlideIndex];
-    let audioPreview = slideEditor.querySelector('.audio-preview');
-    audioPreview.style.display = 'block';
-    audioPreview.innerHTML = '<span><i class="fas fa-spinner fa-spin"></i> Uploading...</span>';
-    try {
-        const response = await fetch('/upload_inline_audio', {
-            method: 'POST',
-            body: formData
-        });
-        const data = await response.json();
-        if (data.success) {
-            slideEditor.querySelector('.slide-audio-url').value = data.url;
-            audioPreview.innerHTML = `<audio controls src="${data.url}"></audio>`;
-        } else {
-            audioPreview.innerHTML = `<span class='text-danger'>${data.error || 'Failed to upload audio'}</span>`;
+    // Live waveform
+    if (recordingWaveSurfer) { recordingWaveSurfer.destroy(); }
+    recordingWaveSurfer = WaveSurfer.create({
+        container: '#recordingWaveform',
+        waveColor: '#4F4A85',
+        progressColor: '#383351',
+        height: 80,
+        interact: false,
+        responsive: true
+    });
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaStreamSource(stream);
+    const analyser = audioCtx.createAnalyser();
+    source.connect(analyser);
+    const bufferLength = analyser.fftSize;
+    const dataArray = new Uint8Array(bufferLength);
+    function draw() {
+        analyser.getByteTimeDomainData(dataArray);
+        let max = Math.max(...dataArray);
+        let min = Math.min(...dataArray);
+        let amp = (max - min) / 255;
+        recordingWaveSurfer.setHeight(80 + amp * 40);
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            requestAnimationFrame(draw);
         }
-    } catch (error) {
-        audioPreview.innerHTML = `<span class='text-danger'>Error uploading audio. Please try again.</span>`;
     }
-    $('#audioRecordModal').modal('hide');
+    draw();
 };
+
+function playWaveform() {
+    if (playbackWaveSurfer) playbackWaveSurfer.playPause();
+}
 </script>
 {% endblock %}
