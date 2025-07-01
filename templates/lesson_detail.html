@@ -29,7 +29,7 @@
                                     <!-- Text Content Section -->
                                     <div class="slide-text-section">
                                         {% if slide.content %}
-                                <div class="slide-content">
+                                            <div class="slide-content">
                                                 {{ slide.content|replace('\n', '<br>')|safe }}
                                             </div>
                                         {% else %}
@@ -38,25 +38,68 @@
                                                 <span>No content for this slide</span>
                                             </div>
                                         {% endif %}
+                                        {% if slide.audio_url %}
+                                            <div class="slide-audio-player mt-3 text-center">
+                                                <audio controls src="{{ slide.audio_url }}"></audio>
+                                            </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 
                                 <div class="slide-indicator">
                                     <span class="slide-number">{{ loop.index }}</span>
-                                    <span class="slide-total">/ {{ lesson.slides|length }}</span>
+                                    <span class="slide-total">/ {{ lesson.slides|length + 1 }}</span>
                                 </div>
                             </div>
                         {% endfor %}
+                        <!-- Quiz Slide -->
+                        {% if lesson.quiz and session.user_id and session.user_id not in lesson.quiz.completed_by %}
+                        <div class="carousel-item">
+                            <div class="slide-container d-flex flex-column align-items-center justify-content-center" style="min-height:400px;">
+                                <h3 class="mb-4">{{ t.lesson_quiz }}</h3>
+                                <div class="w-100" style="max-width:600px;">
+                                    <form method="POST" action="{{ url_for('take_lesson_quiz', lesson_id=lesson._id) }}" id="lessonQuizForm">
+                                        {% for q in lesson.quiz.questions %}
+                                            {% set q_idx = loop.index0 %}
+                                            <div class="form-group mb-4">
+                                                <label><b>{{ t.question }} {{ loop.index }}:</b> {{ q.question }}</label>
+                                                {% if q.type == 'short_answer' or not q.type %}
+                                                <input type="text" name="answers[]" class="form-control" required>
+                                                {% elif q.type == 'multiple_choice' %}
+                                                    {% for opt in q.options %}
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="radio" name="answers[]" id="q{{ q_idx }}_opt{{ loop.index0 }}" value="{{ loop.index }}" required>
+                                                            <label class="form-check-label" for="q{{ q_idx }}_opt{{ loop.index0 }}">{{ opt }}</label>
+                                                        </div>
+                                                    {% endfor %}
+                                                {% elif q.type == 'true_false' %}
+                                                    <select name="answers[]" class="form-control" required>
+                                                        <option value="True">True</option>
+                                                        <option value="False">False</option>
+                                                    </select>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                        <button type="submit" class="btn btn-primary">{{ t.submit_quiz }}</button>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="slide-indicator">
+                                <span class="slide-number">{{ lesson.slides|length + 1 }}</span>
+                                <span class="slide-total">/ {{ lesson.slides|length + 1 }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                     
                     <!-- Modern Navigation Buttons -->
-                    <button class="carousel-control-prev modern-nav-btn" type="button" data-target="#lessonSlides" data-slide="prev">
+                    <button class="carousel-control-prev modern-nav-btn" type="button" data-target="#lessonSlides" data-slide="prev" id="carouselPrevBtn">
                         <div class="nav-btn-content">
                             <i class="fas fa-chevron-left"></i>
                             <span class="nav-text">{{ t.previous }}</span>
                         </div>
                     </button>
-                    <button class="carousel-control-next modern-nav-btn" type="button" data-target="#lessonSlides" data-slide="next">
+                    <button class="carousel-control-next modern-nav-btn" type="button" data-target="#lessonSlides" data-slide="next" id="carouselNextBtn">
                         <div class="nav-btn-content">
                             <span class="nav-text">{{ t.next }}</span>
                             <i class="fas fa-chevron-right"></i>
@@ -69,6 +112,9 @@
                             <li data-target="#lessonSlides" data-slide-to="{{ loop.index0 }}" 
                                 class="{% if loop.first %}active{% endif %}"></li>
                         {% endfor %}
+                        {% if lesson.quiz and session.user_id and session.user_id not in lesson.quiz.completed_by %}
+                            <li data-target="#lessonSlides" data-slide-to="{{ lesson.slides|length }}"></li>
+                        {% endif %}
                     </ol>
                 </div>
             </div>
@@ -80,39 +126,7 @@
         
         <!-- Add this after the lesson content -->
         {% if lesson.quiz and session.user_id %}
-            {% if session.user_id not in lesson.quiz.completed_by %}
-                <div class="card mt-4">
-                    <div class="card-header">
-                        <h4>{{ t.lesson_quiz }}</h4>
-                    </div>
-                    <div class="card-body">
-                        <form method="POST" action="{{ url_for('take_lesson_quiz', lesson_id=lesson._id) }}" id="lessonQuizForm">
-                            {% for q in lesson.quiz.questions %}
-                                {% set q_idx = loop.index0 %}
-                                <div class="form-group mb-4">
-                                    <label><b>{{ t.question }} {{ loop.index }}:</b> {{ q.question }}</label>
-                                    {% if q.type == 'short_answer' or not q.type %}
-                                    <input type="text" name="answers[]" class="form-control" required>
-                                    {% elif q.type == 'multiple_choice' %}
-                                        {% for opt in q.options %}
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="answers[]" id="q{{ q_idx }}_opt{{ loop.index0 }}" value="{{ loop.index }}" required>
-                                                <label class="form-check-label" for="q{{ q_idx }}_opt{{ loop.index0 }}">{{ opt }}</label>
-                                            </div>
-                                        {% endfor %}
-                                    {% elif q.type == 'true_false' %}
-                                        <select name="answers[]" class="form-control" required>
-                                            <option value="True">True</option>
-                                            <option value="False">False</option>
-                                        </select>
-                                    {% endif %}
-                                </div>
-                            {% endfor %}
-                            <button type="submit" class="btn btn-primary">{{ t.submit_quiz }}</button>
-                        </form>
-                    </div>
-                </div>
-            {% else %}
+            {% if session.user_id in lesson.quiz.completed_by %}
                 <div class="card mt-4">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h4>{{ t.lesson_quiz }}</h4>
@@ -505,6 +519,31 @@ document.addEventListener('DOMContentLoaded', function() {
             ringLibertyBell();
         }
     });
+    
+    // Hide prev button on first slide, hide next button on quiz slide
+    $('#lessonSlides').on('slid.bs.carousel', function (e) {
+        var totalSlides = $('.carousel-item').length;
+        var activeIndex = $(e.target).find('.carousel-item.active').index();
+        if (activeIndex === 0) {
+            $('#carouselPrevBtn').hide();
+        } else {
+            $('#carouselPrevBtn').show();
+        }
+        if (activeIndex === totalSlides - 1) {
+            $('#carouselNextBtn').hide();
+        } else {
+            $('#carouselNextBtn').show();
+        }
+    });
+    // Initial state
+    var totalSlides = $('.carousel-item').length;
+    var activeIndex = $('#lessonSlides .carousel-item.active').index();
+    if (activeIndex === 0) {
+        $('#carouselPrevBtn').hide();
+    }
+    if (activeIndex === totalSlides - 1) {
+        $('#carouselNextBtn').hide();
+    }
 });
 
 // Fireworks and Liberty Bell functions (if needed)
