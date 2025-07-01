@@ -153,15 +153,64 @@ def create_lesson():
         flash('Access denied', 'error')
         return redirect(url_for('dashboard'))
     if request.method == 'POST':
-        # Basic lesson creation logic (expand as needed)
+        # Get lesson title
         title = request.form.get('lesson_title')
-        slides = [s for s in request.form.getlist('slide_content') if s and s.strip()]
+        
+        # Get slides with new structure
+        slide_contents = request.form.getlist('slide_content')
+        slide_image_urls = request.form.getlist('slide_image_url')
+        
+        # Create slides array with image and content
+        slides = []
+        for i in range(len(slide_contents)):
+            slide = {
+                'content': slide_contents[i] if slide_contents[i] else None,
+                'image_url': slide_image_urls[i] if slide_image_urls[i] else None
+            }
+            slides.append(slide)
+        
+        # Create lesson document
         lesson = {
             'title': title,
             'slides': slides,
             'date_created': datetime.datetime.utcnow(),
             'is_slide_format': True
         }
+        
+        # Add quiz if present
+        if request.form.get('has_quiz'):
+            questions = request.form.getlist('quiz_questions[]')
+            answers = request.form.getlist('quiz_answers[]')
+            types = request.form.getlist('quiz_question_types[]')
+            quiz_questions = []
+            for idx, q in enumerate(questions):
+                q_type = types[idx] if idx < len(types) else 'short_answer'
+                q_obj = {
+                    'question': q,
+                    'type': q_type,
+                    'answer': answers[idx] if idx < len(answers) else ''
+                }
+                if q_type == 'multiple_choice':
+                    # Collect all options for this question
+                    options = []
+                    opt_idx = 1
+                    while True:
+                        opt_key = f'quiz_option_{opt_idx}[]'
+                        opt_vals = request.form.getlist(opt_key)
+                        if not opt_vals:
+                            break
+                        # Each opt_vals is a list, one value per question block
+                        if len(opt_vals) > idx:
+                            options.append(opt_vals[idx])
+                        opt_idx += 1
+                    q_obj['options'] = options
+                quiz_questions.append(q_obj)
+            quiz_data = {
+                'questions': quiz_questions,
+                'completed_by': []
+            }
+            lesson['quiz'] = quiz_data
+        
         lessons_collection.insert_one(lesson)
         flash('Lesson created successfully!', 'success')
         return redirect(url_for('lessons'))
@@ -246,6 +295,85 @@ def delete_lesson(lesson_id):
     except Exception as e:
         flash(f'Error deleting lesson: {e}', 'error')
     return redirect(url_for('lessons'))
+
+@app.route('/take_lesson_quiz/<lesson_id>', methods=['POST'])
+@login_required
+def take_lesson_quiz(lesson_id):
+    lesson = lessons_collection.find_one({'_id': ObjectId(lesson_id)})
+    if not lesson or 'quiz' not in lesson:
+        flash('Quiz not found for this lesson.', 'error')
+        return redirect(url_for('lesson_detail', lesson_id=lesson_id))
+
+    user_id = str(session['user_id'])
+    quiz = lesson['quiz']
+    questions = quiz['questions']
+    user_answers = request.form.getlist('answers[]')
+    score = 0
+    total = len(questions)
+    results = []
+
+    for idx, q in enumerate(questions):
+        q_type = q.get('type', 'short_answer')
+        correct = False
+        user_answer = user_answers[idx].strip() if idx < len(user_answers) else ''
+        correct_answer = q.get('answer', '').strip()
+        if q_type == 'short_answer':
+            correct = user_answer.lower().strip() == correct_answer.lower().strip()
+        elif q_type == 'multiple_choice':
+            # For MC, user_answer is the selected option index (1-based as string), correct_answer is also 1-based as string
+            correct = user_answer == correct_answer
+            # For review, show the option text
+            user_answer_text = q['options'][int(user_answer)-1] if user_answer.isdigit() and 1 <= int(user_answer) <= len(q['options']) else user_answer
+            correct_answer_text = q['options'][int(correct_answer)-1] if correct_answer.isdigit() and 1 <= int(correct_answer) <= len(q['options']) else correct_answer
+        elif q_type == 'true_false':
+            correct = user_answer.lower() == correct_answer.lower()
+            user_answer_text = user_answer.capitalize()
+            correct_answer_text = correct_answer.capitalize()
+        else:
+            user_answer_text = user_answer
+            correct_answer_text = correct_answer
+        if q_type == 'multiple_choice' or q_type == 'true_false':
+            results.append({'question': q['question'], 'your_answer': user_answer_text, 'correct_answer': correct_answer_text, 'is_correct': correct})
+        else:
+            results.append({'question': q['question'], 'your_answer': user_answer, 'correct_answer': correct_answer, 'is_correct': correct})
+        if correct:
+            score += 1
+
+    # Store result in lesson document (per user)
+    if 'results' not in quiz:
+        quiz['results'] = {}
+    quiz['results'][user_id] = {
+        'score': score,
+        'total_questions': total,
+        'percentage': (score / total) * 100 if total else 0,
+        'details': results
+    }
+    if 'completed_by' not in quiz:
+        quiz['completed_by'] = []
+    if user_id not in quiz['completed_by']:
+        quiz['completed_by'].append(user_id)
+    lessons_collection.update_one({'_id': ObjectId(lesson_id)}, {'$set': {'quiz': quiz}})
+    flash(f'Quiz submitted! Your score: {score}/{total}', 'success')
+    return redirect(url_for('lesson_detail', lesson_id=lesson_id))
+
+@app.route('/reset_lesson_quiz/<lesson_id>', methods=['POST'])
+@login_required
+def reset_lesson_quiz(lesson_id):
+    lesson = lessons_collection.find_one({'_id': ObjectId(lesson_id)})
+    if not lesson or 'quiz' not in lesson:
+        flash('Quiz not found for this lesson.', 'error')
+        return redirect(url_for('lesson_detail', lesson_id=lesson_id))
+
+    user_id = str(session['user_id'])
+    quiz = lesson['quiz']
+    # Remove user from completed_by and results
+    if 'completed_by' in quiz and user_id in quiz['completed_by']:
+        quiz['completed_by'].remove(user_id)
+    if 'results' in quiz and user_id in quiz['results']:
+        del quiz['results'][user_id]
+    lessons_collection.update_one({'_id': ObjectId(lesson_id)}, {'$set': {'quiz': quiz}})
+    flash('Quiz reset. You can take it again.', 'success')
+    return redirect(url_for('lesson_detail', lesson_id=lesson_id))
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)

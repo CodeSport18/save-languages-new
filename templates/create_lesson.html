@@ -16,18 +16,33 @@
                 <div id="slides-container">
                     <!-- First slide -->
                     <div class="slide-editor mb-4" data-slide="0">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
                         <h4>{{ t.slide }} 1</h4>
-                        <div class="editor-toolbar mb-2">
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertImage(0)">
-                                    <i class="fas fa-image"></i> {{ t.insert_image }}
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSlide(this)">
+                                <i class="fas fa-trash"></i> {{ t.remove_slide }}
                                 </button>
-                            </div>
                         </div>
-                        <div class="form-control slide-content rich-editor" contenteditable="true" data-placeholder="Type your content here..." style="min-height: 150px; max-height: 400px; overflow-y: auto;"></div>
+                        
+                        <!-- Image Section -->
+                        <div class="slide-image-section mb-3">
+                            <label class="form-label fw-bold">{{ t.slide_image }}</label>
+                            <div class="image-upload-area" onclick="triggerImageUpload(0)">
+                                <div class="upload-placeholder" id="upload-placeholder-0">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <p>{{ t.click_to_upload_image }}</p>
+                                </div>
+                                <img class="uploaded-image" id="uploaded-image-0" style="display: none;">
+                            </div>
+                            <input type="file" class="slide-image-input" id="slide-image-0" style="display: none" accept="image/*" onchange="handleImageUpload(this, 0)">
+                            <input type="hidden" name="slide_image_url" class="slide-image-url">
+                        </div>
+                        
+                        <!-- Content Section -->
+                        <div class="slide-content-section">
+                            <label class="form-label fw-bold">{{ t.slide_content }}</label>
+                            <div class="form-control slide-content rich-editor" contenteditable="true" data-placeholder="{{ t.type_your_content_here }}" style="min-height: 150px; max-height: 400px; overflow-y: auto;"></div>
                         <textarea class="form-control slide-content-hidden" name="slide_content" style="display: none;"></textarea>
-                        <input type="file" class="slide-image-input" style="display: none" accept="image/*">
-                        <input type="hidden" name="slide_image" class="slide-image-path">
+                        </div>
                     </div>
                 </div>
 
@@ -55,8 +70,21 @@
                                         <input type="text" class="form-control" name="quiz_questions[]">
                                     </div>
                                     <div class="form-group">
+                                        <label>{{ t.question_type }}</label>
+                                        <select class="form-control quiz-question-type" name="quiz_question_types[]" onchange="handleQuestionTypeChange(this)">
+                                            <option value="short_answer">{{ t.short_answer }}</option>
+                                            <option value="multiple_choice">{{ t.multiple_choice }}</option>
+                                            <option value="true_false">{{ t.true_false }}</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group quiz-options-group" style="display: none;">
+                                        <label>{{ t.options }}</label>
+                                        <div class="quiz-options-list"></div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="addOption(this)">{{ t.add_option }}</button>
+                                    </div>
+                                    <div class="form-group quiz-answer-group">
                                         <label>{{ t.answer }}</label>
-                                        <input type="text" class="form-control" name="quiz_answers[]">
+                                        <input type="text" class="form-control quiz-answer-input" name="quiz_answers[]">
                                     </div>
                                 </div>
                             </div>
@@ -79,9 +107,57 @@
 <style>
 .slide-editor {
     border: 1px solid #ddd;
-    padding: 15px;
-    border-radius: 5px;
+    padding: 20px;
+    border-radius: 8px;
     background: #f8f9fa;
+    margin-bottom: 20px;
+}
+
+.slide-image-section {
+    margin-bottom: 20px;
+}
+
+.image-upload-area {
+    border: 2px dashed #ced4da;
+    border-radius: 8px;
+    padding: 30px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.image-upload-area:hover {
+    border-color: #6c757d;
+    background: #f8f9fa;
+}
+
+.upload-placeholder {
+    color: #6c757d;
+}
+
+.upload-placeholder i {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    opacity: 0.6;
+}
+
+.upload-placeholder p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.uploaded-image {
+    max-width: 100%;
+    max-height: 300px;
+    width: auto;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.slide-content-section {
+    margin-top: 20px;
 }
 
 .lesson-image {
@@ -334,23 +410,33 @@ function addSlide() {
     newSlide.dataset.slide = slideCount - 1;
     
     newSlide.innerHTML = `
-        <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="d-flex justify-content-between align-items-center mb-3">
             <h4>${t.slide} ${slideCount}</h4>
-            <button type="button" class="btn btn-sm btn-danger" onclick="removeSlide(this)">
-                ${t.remove_slide}
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSlide(this)">
+                <i class="fas fa-trash"></i> ${t.remove_slide}
             </button>
         </div>
-        <div class="editor-toolbar mb-2">
-            <div class="btn-group">
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertImage(${slideCount - 1})">
-                    <i class="fas fa-image"></i> ${t.insert_image}
-                </button>
+        
+        <!-- Image Section -->
+        <div class="slide-image-section mb-3">
+            <label class="form-label fw-bold">${t.slide_image || 'Slide Image'}</label>
+            <div class="image-upload-area" onclick="triggerImageUpload(${slideCount - 1})">
+                <div class="upload-placeholder" id="upload-placeholder-${slideCount - 1}">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>${t.click_to_upload_image || 'Click to upload image'}</p>
+                </div>
+                <img class="uploaded-image" id="uploaded-image-${slideCount - 1}" style="display: none;">
             </div>
+            <input type="file" class="slide-image-input" id="slide-image-${slideCount - 1}" style="display: none" accept="image/*" onchange="handleImageUpload(this, ${slideCount - 1})">
+            <input type="hidden" name="slide_image_url" class="slide-image-url">
         </div>
-        <div class="form-control slide-content rich-editor" contenteditable="true" data-placeholder="Type your content here..." style="min-height: 150px; max-height: 400px; overflow-y: auto;"></div>
+        
+        <!-- Content Section -->
+        <div class="slide-content-section">
+            <label class="form-label fw-bold">${t.slide_content || 'Slide Content'}</label>
+            <div class="form-control slide-content rich-editor" contenteditable="true" data-placeholder="${t.type_your_content_here || 'Type your content here...'}" style="min-height: 150px; max-height: 400px; overflow-y: auto;"></div>
         <textarea class="form-control slide-content-hidden" name="slide_content" style="display: none;"></textarea>
-        <input type="file" class="slide-image-input" style="display: none" accept="image/*">
-        <input type="hidden" name="slide_image" class="slide-image-path">
+        </div>
     `;
     
     container.appendChild(newSlide);
@@ -401,581 +487,155 @@ function updateSlideNumbers() {
     slideCount = slides.length;
 }
 
-function insertImage(slideIndex) {
-    const slideEditor = document.querySelector(`.slide-editor[data-slide="${slideIndex}"]`);
-    const input = slideEditor.querySelector('.slide-image-input');
-    input.click();
+function triggerImageUpload(slideIndex) {
+    document.getElementById(`slide-image-${slideIndex}`).click();
 }
 
-function insertAudio(slideIndex) {
-    const slideEditor = document.querySelector(`.slide-editor[data-slide="${slideIndex}"]`);
-    const input = slideEditor.querySelector('.slide-audio-input');
-    input.click();
-}
-
-async function requestMicPermission() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(track => track.stop()); // Stop the test stream
-        $('#micPermissionModal').modal('hide');
-        startRecording(currentSlideIndex); // Retry the recording
-    } catch (err) {
-        console.error('Microphone permission denied:', err);
-        // Show browser-specific instructions
-        if (err.name === 'NotAllowedError') {
-            $('#micPermissionModal').modal('show');
-        }
-    }
-}
-
-async function startRecording(slideIndex) {
-    currentSlideIndex = slideIndex;
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        recordingStream = stream;
-        mediaRecorder = new MediaRecorder(stream);
-        
-        // Reset audio chunks
-        audioChunks = [];
-        
-        // Show recording modal
-        $('#recordingModal').modal('show');
-        
-        // Set up recording controls
-        const recordButton = document.getElementById('recordButton');
-        const stopButton = document.getElementById('stopButton');
-        const recordingStatus = document.getElementById('recordingStatus');
-        const recordingTimer = document.getElementById('recordingTimer');
-        
-        // Start recording
-        mediaRecorder.start();
-        recordingStartTime = Date.now();
-        
-        // Update UI
-        recordButton.style.display = 'none';
-        stopButton.style.display = 'inline-block';
-        recordingStatus.textContent = t.recording_in_progress;
-        recordingTimer.style.display = 'block';
-        
-        // Start timer
-        recordingTimer = setInterval(updateTimer, 1000);
-        
-        // Start real-time waveform visualization
-        if (wavesurfer) {
-            wavesurfer.startRecording();
-        }
-        
-        mediaRecorder.ondataavailable = (event) => {
-            audioChunks.push(event.data);
-        };
-        
-        mediaRecorder.onstop = () => {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-            const audioUrl = URL.createObjectURL(audioBlob);
-            
-            // Load audio into playback waveform
-            if (playbackWavesurfer) {
-                playbackWavesurfer.loadBlob(audioBlob);
-            }
-            
-            document.getElementById('recordingPlayback').src = audioUrl;
-            document.getElementById('recordingPreview').style.display = 'block';
-            document.getElementById('saveRecording').disabled = false;
-            
-            // Stop recording visualization
-            if (wavesurfer) {
-                wavesurfer.stopRecording();
-            }
-            
-            // Reset UI
-            recordButton.style.display = 'inline-block';
-            stopButton.style.display = 'none';
-            recordingStatus.textContent = t.recording_complete;
-            clearInterval(recordingTimer);
-            
-            // Show recording complete message
-            const completeMsg = document.createElement('div');
-            completeMsg.className = 'alert alert-info alert-dismissible fade show mt-2';
-            completeMsg.innerHTML = `
-                <i class="fas fa-check-circle"></i> Recording complete! Click "Save Recording" to add it to your lesson.
-                <button type="button" class="close" data-dismiss="alert">
-                    <span>&times;</span>
-                </button>
-            `;
-            document.querySelector('#recordingModal .modal-body').appendChild(completeMsg);
-            
-            // Auto-dismiss after 5 seconds
-            setTimeout(() => {
-                if (completeMsg.parentNode) {
-                    completeMsg.remove();
-            }
-            }, 5000);
-        };
-        
-    } catch (err) {
-        console.error('Error accessing microphone:', err);
-        if (err.name === 'NotAllowedError') {
-            $('#micPermissionModal').modal('show');
-        } else {
-            // Show error message in the slide editor
-            const slideEditor = document.querySelector(`.slide-editor[data-slide="${slideIndex}"]`);
-            const errorMsg = document.createElement('div');
-            errorMsg.className = 'alert alert-danger alert-dismissible fade show mt-2';
-            errorMsg.innerHTML = `
-                <i class="fas fa-exclamation-circle"></i> ${t.microphone_error}
-                <button type="button" class="close" data-dismiss="alert">
-                    <span>&times;</span>
-                </button>
-            `;
-            slideEditor.appendChild(errorMsg);
-            
-            // Auto-dismiss after 5 seconds
-            setTimeout(() => {
-                if (errorMsg.parentNode) {
-                    errorMsg.remove();
-        }
-            }, 5000);
-}
-    }
-}
-
-// Add stop recording function
-function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-        mediaRecorder.stop();
-    }
-}
-
-// Add event listeners for recording controls
-document.addEventListener('DOMContentLoaded', function() {
-    const recordButton = document.getElementById('recordButton');
-    const stopButton = document.getElementById('stopButton');
+async function handleImageUpload(input, slideIndex) {
+    const file = input.files[0];
+    if (!file) return;
     
-    if (recordButton) {
-        recordButton.addEventListener('click', function() {
-            startRecording(currentSlideIndex);
-        });
-    }
-    
-    if (stopButton) {
-        stopButton.addEventListener('click', stopRecording);
-    }
-});
-
-async function saveRecording() {
-    if (audioChunks.length === 0) return;
-    
-    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+    const slideEditor = input.closest('.slide-editor');
     const formData = new FormData();
-    formData.append('audio', audioBlob, 'recording.wav');
+    formData.append('image', file);
     
-    // Show loading indicator
-    const slideEditor = document.querySelector(`.slide-editor[data-slide="${currentSlideIndex}"]`);
-    const loadingMsg = document.createElement('div');
-    loadingMsg.className = 'alert alert-info alert-dismissible fade show mt-2';
-    loadingMsg.innerHTML = `
-        <i class="fas fa-spinner fa-spin"></i> Uploading recorded audio...
-        <button type="button" class="close" data-dismiss="alert">
-            <span>&times;</span>
-        </button>
-    `;
-    slideEditor.appendChild(loadingMsg);
+    // Show loading state
+    const placeholder = document.getElementById(`upload-placeholder-${slideIndex}`);
+    const originalContent = placeholder.innerHTML;
+    placeholder.innerHTML = '<i class="fas fa-spinner fa-spin"></i><p>Uploading...</p>';
     
     try {
-        const response = await fetch('/upload_audio', {
+        const response = await fetch('/upload_inline_image', {
             method: 'POST',
             body: formData
         });
         const data = await response.json();
         
-        // Remove loading indicator
-        if (loadingMsg.parentNode) {
-            loadingMsg.remove();
-        }
-        
         if (data.success) {
-            slideEditor.querySelector('.slide-audio-path').value = data.filename;
+            // Update image display
+            const uploadedImage = document.getElementById(`uploaded-image-${slideIndex}`);
+            uploadedImage.src = data.url;
+            uploadedImage.style.display = 'block';
+            placeholder.style.display = 'none';
             
-            // Insert audio player at cursor position
-            const audioTag = `<audio controls style="margin: 10px 0;"><source src="${data.url}" type="audio/wav"></audio>`;
-            insertAtCursor(audioTag);
-            
-            // Update hidden textarea with HTML content
-            const richEditor = slideEditor.querySelector('.rich-editor');
-            const hiddenTextarea = slideEditor.querySelector('.slide-content-hidden');
-            if (richEditor && hiddenTextarea) {
-                hiddenTextarea.value = richEditor.innerHTML;
-            }
-            
-            // Add or update audio preview
-            let preview = slideEditor.querySelector('.audio-preview');
-            if (!preview) {
-                preview = document.createElement('div');
-                preview.className = 'audio-preview mt-2';
-                slideEditor.appendChild(preview);
-            }
-            preview.innerHTML = `
-                <i class="fas fa-music"></i>
-                <span>${t.recorded_audio}</span>
-                <audio controls>
-                    <source src="${data.url}" type="audio/wav">
-                </audio>
-            `;
+            // Store the URL
+            slideEditor.querySelector('.slide-image-url').value = data.url;
             
             // Show success message
-            const successMsg = document.createElement('div');
-            successMsg.className = 'alert alert-success alert-dismissible fade show mt-2';
-            successMsg.innerHTML = `
-                <i class="fas fa-check-circle"></i> Audio recording uploaded successfully!
-                <button type="button" class="close" data-dismiss="alert">
-                    <span>&times;</span>
-                </button>
-            `;
-            slideEditor.appendChild(successMsg);
-            
-            // Auto-dismiss after 3 seconds
-            setTimeout(() => {
-                if (successMsg.parentNode) {
-                    successMsg.remove();
-                }
-            }, 3000);
-            
-            // Close modal and cleanup
-            $('#recordingModal').modal('hide');
-            if (recordingStream) {
-                recordingStream.getTracks().forEach(track => track.stop());
-            }
+            showMessage(slideEditor, 'Image uploaded successfully!', 'success');
         } else {
-            // Show error message
-            const errorMsg = document.createElement('div');
-            errorMsg.className = 'alert alert-danger alert-dismissible fade show mt-2';
-            errorMsg.innerHTML = `
-                <i class="fas fa-exclamation-circle"></i> ${data.error || 'Failed to upload audio recording'}
-                <button type="button" class="close" data-dismiss="alert">
-                    <span>&times;</span>
-                </button>
-            `;
-            slideEditor.appendChild(errorMsg);
-            
-            // Auto-dismiss after 5 seconds
-            setTimeout(() => {
-                if (errorMsg.parentNode) {
-                    errorMsg.remove();
-                }
-            }, 5000);
+            // Restore placeholder
+            placeholder.innerHTML = originalContent;
+            showMessage(slideEditor, data.error || 'Failed to upload image', 'danger');
         }
     } catch (error) {
-        console.error('Error saving recording:', error);
-        
-        // Remove loading indicator
-        if (loadingMsg.parentNode) {
-            loadingMsg.remove();
+        console.error('Error uploading image:', error);
+        placeholder.innerHTML = originalContent;
+        showMessage(slideEditor, 'Error uploading image. Please try again.', 'danger');
         }
-        
-        // Show error message
-        const errorMsg = document.createElement('div');
-        errorMsg.className = 'alert alert-danger alert-dismissible fade show mt-2';
-        errorMsg.innerHTML = `
-            <i class="fas fa-exclamation-circle"></i> Error uploading audio recording. Please try again.
-            <button type="button" class="close" data-dismiss="alert">
-                <span>&times;</span>
-            </button>
-        `;
-        slideEditor.appendChild(errorMsg);
-        
-        // Auto-dismiss after 5 seconds
-        setTimeout(() => {
-            if (errorMsg.parentNode) {
-                errorMsg.remove();
-            }
-        }, 5000);
     }
+
+function showMessage(container, message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show mt-2`;
+    alertDiv.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}
+                <button type="button" class="close" data-dismiss="alert">
+                    <span>&times;</span>
+                </button>
+            `;
+    container.appendChild(alertDiv);
+                    
+                    // Auto-dismiss after 3 seconds
+                    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+                        }
+                    }, 3000);
 }
 
-// Add event listeners for rich editor cursor position
-document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('rich-editor')) {
-        saveSelection();
-    }
-});
-
-document.addEventListener('keyup', function(e) {
-    if (e.target.classList.contains('rich-editor')) {
-        saveSelection();
-        // Sync hidden textarea with rich editor content
-        const hiddenTextarea = e.target.parentElement.querySelector('.slide-content-hidden');
-        if (hiddenTextarea) {
-            hiddenTextarea.value = e.target.innerHTML;
-        }
-    }
-});
-
-document.addEventListener('input', function(e) {
-    if (e.target.classList.contains('rich-editor')) {
-        // Sync hidden textarea with rich editor content
-        const hiddenTextarea = e.target.parentElement.querySelector('.slide-content-hidden');
-        if (hiddenTextarea) {
-            hiddenTextarea.value = e.target.innerHTML;
-        }
-    }
-});
-
-// Add event listener for media uploads
-document.addEventListener('change', async function(e) {
-    if (e.target.classList.contains('slide-image-input')) {
-        const slideEditor = e.target.closest('.slide-editor');
-        const richEditor = slideEditor.querySelector('.rich-editor');
-        const hiddenTextarea = slideEditor.querySelector('.slide-content-hidden');
-        const file = e.target.files[0]; // Only take first file
-        
-        if (file) {
-            const formData = new FormData();
-            formData.append('image', file);
-            
-            // Show loading indicator
-            const loadingMsg = document.createElement('div');
-            loadingMsg.className = 'alert alert-info alert-dismissible fade show mt-2';
-            loadingMsg.innerHTML = `
-                <i class="fas fa-spinner fa-spin"></i> Uploading image...
-                <button type="button" class="close" data-dismiss="alert">
-                    <span>&times;</span>
-                </button>
-            `;
-            slideEditor.appendChild(loadingMsg);
-            
-            try {
-                const response = await fetch('/upload_inline_image', {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await response.json();
-                
-                // Remove loading indicator
-                if (loadingMsg.parentNode) {
-                    loadingMsg.remove();
-                }
-                
-                if (data.success) {
-                    // Insert image at cursor position
-                    const imageTag = `<img src="${data.url}" alt="${file.name}" class="lesson-image">`;
-                    insertAtCursor(imageTag);
-                    
-                    // Update hidden textarea with HTML content
-                    hiddenTextarea.value = richEditor.innerHTML;
-                    slideEditor.querySelector('.slide-image-path').value = data.filename;
-                    
-                    // Add or update image preview
-                    let preview = slideEditor.querySelector('.image-preview');
-                    if (!preview) {
-                        preview = document.createElement('div');
-                        preview.className = 'image-preview mt-2';
-                        slideEditor.appendChild(preview);
-                    }
-                    preview.innerHTML = `
-                        <i class="fas fa-image"></i>
-                        <span>${file.name}</span>
-                        <img src="${data.url}" alt="${file.name}" class="lesson-image" style="max-width: 200px; max-height: 150px;">
-                    `;
-                    
-                    // Show success message
-                    const successMsg = document.createElement('div');
-                    successMsg.className = 'alert alert-success alert-dismissible fade show mt-2';
-                    successMsg.innerHTML = `
-                        <i class="fas fa-check-circle"></i> Image uploaded successfully!
-                        <button type="button" class="close" data-dismiss="alert">
-                            <span>&times;</span>
-                        </button>
-                    `;
-                    slideEditor.appendChild(successMsg);
-                    
-                    // Auto-dismiss after 3 seconds
-                    setTimeout(() => {
-                        if (successMsg.parentNode) {
-                            successMsg.remove();
-                        }
-                    }, 3000);
-                } else {
-                    // Show error message
-                    const errorMsg = document.createElement('div');
-                    errorMsg.className = 'alert alert-danger alert-dismissible fade show mt-2';
-                    errorMsg.innerHTML = `
-                        <i class="fas fa-exclamation-circle"></i> ${data.error || 'Failed to upload image'}
-                        <button type="button" class="close" data-dismiss="alert">
-                            <span>&times;</span>
-                        </button>
-                    `;
-                    slideEditor.appendChild(errorMsg);
-                    
-                    // Auto-dismiss after 5 seconds
-                    setTimeout(() => {
-                        if (errorMsg.parentNode) {
-                            errorMsg.remove();
-                        }
-                    }, 5000);
-                }
-            } catch (error) {
-                console.error('Error uploading image:', error);
-                
-                // Remove loading indicator
-                if (loadingMsg.parentNode) {
-                    loadingMsg.remove();
-                }
-                
-                // Show error message
-                const errorMsg = document.createElement('div');
-                errorMsg.className = 'alert alert-danger alert-dismissible fade show mt-2';
-                errorMsg.innerHTML = `
-                    <i class="fas fa-exclamation-circle"></i> Error uploading image. Please try again.
-                    <button type="button" class="close" data-dismiss="alert">
-                        <span>&times;</span>
-                    </button>
-                `;
-                slideEditor.appendChild(errorMsg);
-                
-                // Auto-dismiss after 5 seconds
-                setTimeout(() => {
-                    if (errorMsg.parentNode) {
-                        errorMsg.remove();
-                    }
-                }, 5000);
-            }
-        }
-    } else if (e.target.classList.contains('slide-audio-input')) {
-        const slideEditor = e.target.closest('.slide-editor');
-        const file = e.target.files[0];
-        
-        if (file) {
-            const formData = new FormData();
-            formData.append('audio', file);
-            
-            // Show loading indicator
-            const loadingMsg = document.createElement('div');
-            loadingMsg.className = 'alert alert-info alert-dismissible fade show mt-2';
-            loadingMsg.innerHTML = `
-                <i class="fas fa-spinner fa-spin"></i> Uploading audio...
-                <button type="button" class="close" data-dismiss="alert">
-                    <span>&times;</span>
-                </button>
-            `;
-            slideEditor.appendChild(loadingMsg);
-            
-            try {
-                const response = await fetch('/upload_audio', {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await response.json();
-                
-                // Remove loading indicator
-                if (loadingMsg.parentNode) {
-                    loadingMsg.remove();
-                }
-                
-                if (data.success) {
-                    slideEditor.querySelector('.slide-audio-path').value = data.filename;
-                    
-                    // Insert audio player at cursor position
-                    const audioTag = `<audio controls style="margin: 10px 0;"><source src="${data.url}" type="${file.type}"></audio>`;
-                    insertAtCursor(audioTag);
-                    
-                    // Update hidden textarea with HTML content
-                    const richEditor = slideEditor.querySelector('.rich-editor');
-                    const hiddenTextarea = slideEditor.querySelector('.slide-content-hidden');
-                    if (richEditor && hiddenTextarea) {
-                        hiddenTextarea.value = richEditor.innerHTML;
-                    }
-                    
-                    // Add or update audio preview
-                    let preview = slideEditor.querySelector('.audio-preview');
-                    if (!preview) {
-                        preview = document.createElement('div');
-                        preview.className = 'audio-preview mt-2';
-                        slideEditor.appendChild(preview);
-                    }
-                    preview.innerHTML = `
-                        <i class="fas fa-music"></i>
-                        <span>${file.name}</span>
-                        <audio controls>
-                            <source src="${data.url}" type="${file.type}">
-                        </audio>
-                    `;
-                    
-                    // Show success message
-                    const successMsg = document.createElement('div');
-                    successMsg.className = 'alert alert-success alert-dismissible fade show mt-2';
-                    successMsg.innerHTML = `
-                        <i class="fas fa-check-circle"></i> Audio uploaded successfully!
-                        <button type="button" class="close" data-dismiss="alert">
-                            <span>&times;</span>
-                        </button>
-                    `;
-                    slideEditor.appendChild(successMsg);
-                    
-                    // Auto-dismiss after 3 seconds
-                    setTimeout(() => {
-                        if (successMsg.parentNode) {
-                            successMsg.remove();
-                        }
-                    }, 3000);
-                } else {
-                    // Show error message
-                    const errorMsg = document.createElement('div');
-                    errorMsg.className = 'alert alert-danger alert-dismissible fade show mt-2';
-                    errorMsg.innerHTML = `
-                        <i class="fas fa-exclamation-circle"></i> ${data.error || 'Failed to upload audio'}
-                        <button type="button" class="close" data-dismiss="alert">
-                            <span>&times;</span>
-                        </button>
-                    `;
-                    slideEditor.appendChild(errorMsg);
-                    
-                    // Auto-dismiss after 5 seconds
-                    setTimeout(() => {
-                        if (errorMsg.parentNode) {
-                            errorMsg.remove();
-                        }
-                    }, 5000);
-                }
-            } catch (error) {
-                console.error('Error uploading audio:', error);
-                
-                // Remove loading indicator
-                if (loadingMsg.parentNode) {
-                    loadingMsg.remove();
-                }
-                
-                // Show error message
-                const errorMsg = document.createElement('div');
-                errorMsg.className = 'alert alert-danger alert-dismissible fade show mt-2';
-                errorMsg.innerHTML = `
-                    <i class="fas fa-exclamation-circle"></i> Error uploading audio. Please try again.
-                    <button type="button" class="close" data-dismiss="alert">
-                        <span>&times;</span>
-                    </button>
-                `;
-                slideEditor.appendChild(errorMsg);
-                
-                // Auto-dismiss after 5 seconds
-                setTimeout(() => {
-                    if (errorMsg.parentNode) {
-                        errorMsg.remove();
-                    }
-                }, 5000);
-            }
-        }
-    }
-});
-
+// Quiz functionality
 document.getElementById('hasQuiz').addEventListener('change', function() {
     const quizSection = document.getElementById('quizSection');
     quizSection.style.display = this.checked ? 'block' : 'none';
-
+    
     // Toggle required attribute for quiz fields
     const questionInputs = quizSection.querySelectorAll('input[name="quiz_questions[]"]');
     const answerInputs = quizSection.querySelectorAll('input[name="quiz_answers[]"]');
     questionInputs.forEach(input => input.required = this.checked);
     answerInputs.forEach(input => input.required = this.checked);
 });
+
+function handleQuestionTypeChange(select) {
+    const block = select.closest('.question-block');
+    const optionsGroup = block.querySelector('.quiz-options-group');
+    const answerGroup = block.querySelector('.quiz-answer-group');
+    let answerInput = block.querySelector('.quiz-answer-input');
+    if (select.value === 'multiple_choice') {
+        optionsGroup.style.display = '';
+        answerGroup.style.display = '';
+        if (answerInput.tagName !== 'INPUT') {
+            answerGroup.innerHTML = `<label>{{ t.answer }}</label><input type="text" class="form-control quiz-answer-input" name="quiz_answers[]" placeholder="{{ t.enter_correct_option_number }}">`;
+        } else {
+            answerInput.type = 'text';
+            answerInput.placeholder = '{{ t.enter_correct_option_number }}';
+                                }
+    } else if (select.value === 'true_false') {
+        optionsGroup.style.display = 'none';
+        answerGroup.style.display = '';
+        answerGroup.innerHTML = `<label>{{ t.answer }}</label><select class="form-control quiz-answer-input" name="quiz_answers[]"><option value="True">True</option><option value="False">False</option></select>`;
+    } else {
+        optionsGroup.style.display = 'none';
+        answerGroup.style.display = '';
+        if (answerInput.tagName !== 'INPUT') {
+            answerGroup.innerHTML = `<label>{{ t.answer }}</label><input type="text" class="form-control quiz-answer-input" name="quiz_answers[]">`;
+        } else {
+            answerInput.type = 'text';
+            answerInput.placeholder = '';
+        }
+    }
+}
+
+function addQuestion() {
+    const container = document.getElementById('questionContainer');
+    const questionCount = container.querySelectorAll('.question-block').length + 1;
+    const quizEnabled = document.getElementById('hasQuiz').checked;
+    const questionBlock = document.createElement('div');
+    questionBlock.className = 'question-block mb-4';
+    questionBlock.innerHTML = `
+        <div class="form-group">
+            <label>{{ t.question }} ${questionCount}</label>
+            <input type="text" class="form-control" name="quiz_questions[]">
+        </div>
+        <div class="form-group">
+            <label>{{ t.question_type }}</label>
+            <select class="form-control quiz-question-type" name="quiz_question_types[]" onchange="handleQuestionTypeChange(this)">
+                <option value="short_answer">{{ t.short_answer }}</option>
+                <option value="multiple_choice">{{ t.multiple_choice }}</option>
+                <option value="true_false">{{ t.true_false }}</option>
+            </select>
+        </div>
+        <div class="form-group quiz-options-group" style="display: none;">
+            <label>{{ t.options }}</label>
+            <div class="quiz-options-list"></div>
+            <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="addOption(this)">{{ t.add_option }}</button>
+        </div>
+        <div class="form-group quiz-answer-group">
+            <label>{{ t.answer }}</label>
+            <input type="text" class="form-control quiz-answer-input" name="quiz_answers[]">
+        </div>
+    `;
+    container.appendChild(questionBlock);
+}
+
+function addOption(btn) {
+    const optionsList = btn.parentElement.querySelector('.quiz-options-list');
+    const optionCount = optionsList.children.length + 1;
+    const optionDiv = document.createElement('div');
+    optionDiv.className = 'input-group mb-2';
+    optionDiv.innerHTML = `<div class="input-group-prepend"><span class="input-group-text">${optionCount}</span></div><input type="text" class="form-control" name="quiz_option_${optionCount}[]"><div class="input-group-append"><button type="button" class="btn btn-outline-danger" onclick="this.parentElement.parentElement.remove()">&times;</button></div>`;
+    optionsList.appendChild(optionDiv);
+}
 
 // Sync all rich editors before form submission
 document.getElementById('lessonForm').addEventListener('submit', function(e) {
@@ -987,80 +647,5 @@ document.getElementById('lessonForm').addEventListener('submit', function(e) {
         }
     });
 });
-
-// Monitor for media deletions in rich editors
-function setupMediaDeletionMonitor() {
-    const richEditors = document.querySelectorAll('.rich-editor');
-    richEditors.forEach(richEditor => {
-        const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.type === 'childList') {
-                    mutation.removedNodes.forEach(function(node) {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            if (node.tagName === 'IMG') {
-                                // Image was deleted, remove from preview
-                                const slideEditor = richEditor.closest('.slide-editor');
-                                const imagePreview = slideEditor.querySelector('.image-preview');
-                                if (imagePreview) {
-                                    const previewImg = imagePreview.querySelector('img');
-                                    if (previewImg && previewImg.src === node.src) {
-                                        imagePreview.remove();
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-            });
-        });
-        
-        observer.observe(richEditor, {
-            childList: true,
-            subtree: true
-        });
-    });
-}
-
-// Setup monitoring when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    setupMediaDeletionMonitor();
-});
-
-let questionCount = 1;
-
-function addQuestion() {
-    const container = document.getElementById('questionContainer');
-    const questionCount = container.querySelectorAll('.question-block').length + 1;
-    const quizEnabled = document.getElementById('hasQuiz').checked;
-    const questionBlock = document.createElement('div');
-    questionBlock.className = 'question-block mb-4';
-    questionBlock.innerHTML = `
-        <div class="form-group">
-            <label>{{ t.question }} ${questionCount}</label>
-            <input type="text" class="form-control" name="quiz_questions[]"${quizEnabled ? ' required' : ''}>
-        </div>
-        <div class="form-group">
-            <label>{{ t.answer }}</label>
-            <input type="text" class="form-control" name="quiz_answers[]"${quizEnabled ? ' required' : ''}>
-        </div>
-    `;
-    container.appendChild(questionBlock);
-}
-
-function removeQuestion(button) {
-    button.closest('.question-block').remove();
-    updateQuestionNumbers();
-}
-
-function updateQuestionNumbers() {
-    const questions = document.querySelectorAll('.question-block');
-    questions.forEach((question, index) => {
-        const label = question.querySelector('label');
-        if (label) {
-            label.textContent = `{{ t.question }} ${index + 1}`;
-        }
-    });
-    questionCount = questions.length;
-}
 </script>
 {% endblock %}
