@@ -97,7 +97,9 @@
 
   <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-      <a class="navbar-brand kashmiri-title" href="/">{{ t.my_app }}</a>
+      <a class="navbar-brand kashmiri-title" href="/">
+        <img src="{{ url_for('static', filename='uploads/hachiv_koshur_logo.png') }}" alt="Hachiv Koshur Logo" style="height: 48px; vertical-align: middle;">
+      </a>
       <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
         <span class="navbar-toggler-icon"></span>
       </button>
