@@ -574,7 +574,6 @@ async function handleImageUpload(input, slideIndex) {
             showMessage(slideEditor, data.error || 'Failed to upload image', 'danger');
         }
     } catch (error) {
-        console.error('Error uploading image:', error);
         placeholder.innerHTML = originalContent;
         showMessage(slideEditor, 'Error uploading image. Please try again.', 'danger');
         }

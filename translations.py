@@ -80,6 +80,8 @@ translations = {
         'your_answer': 'Your Answer',
         'correct_answer': 'Correct Answer',
         'correct': 'Correct?',
+        'unsupported_image_format': 'Unsupported image format. Please use: PNG, JPG, JPEG, GIF',
+        'unsupported_audio_format': 'Unsupported audio format. Please use: MP3, WAV, M4A, OGG, WEBM',
     },
     'de': {
         'dashboard': 'Dashboard',
