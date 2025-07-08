@@ -476,8 +476,9 @@ function addSlide() {
         <!-- Audio Upload Section -->
         <div class="slide-audio-section mb-3">
             <label class="form-label fw-bold">${t.slide_audio || 'Audio (How to say this sentence)'}</label>
-            <div class="audio-upload-area">
+            <div class="audio-upload-area d-flex align-items-center gap-2">
                 <input type="file" class="slide-audio-input" accept="audio/*" onchange="handleAudioUpload(this, ${slideCount - 1})">
+                <button type="button" class="btn btn-outline-primary btn-sm ml-2" onclick="openRecordModal(${slideCount - 1})"><i class="fas fa-microphone"></i> Record Audio</button>
                 <input type="hidden" name="slide_audio_url" class="slide-audio-url">
                 <div class="audio-preview" style="display:none;"></div>
             </div>
