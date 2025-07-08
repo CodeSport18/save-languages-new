@@ -32,14 +32,9 @@
                                             <div class="slide-content">
                                                 {{ slide.content|replace('\n', '<br>')|safe }}
                                             </div>
-                                        {% else %}
-                                            <div class="no-content-placeholder">
-                                                <i class="fas fa-file-text"></i>
-                                                <span>No content for this slide</span>
-                                            </div>
                                         {% endif %}
                                         {% if slide.audio_url %}
-                                            <div class="slide-audio-player mt-3 text-center">
+                                            <div class="slide-audio-player mt-3 d-flex justify-content-center">
                                                 <audio controls src="{{ slide.audio_url }}"></audio>
                                             </div>
                                         {% endif %}
@@ -271,12 +266,14 @@
 .slide-text-section {
     flex: 1;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 20px;
     background: white;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    min-height: 200px;
 }
 
 .slide-content {
@@ -288,20 +285,14 @@
     text-align: center;
 }
 
-.no-content-placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: #6c757d;
-    font-size: 0.9rem;
+.slide-audio-player audio {
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background: #f8f9fa;
+    padding: 8px;
 }
 
-.no-content-placeholder i {
-    font-size: 2rem;
-    margin-bottom: 10px;
-    opacity: 0.5;
-}
+
 
 /* Modern Navigation Buttons */
 .modern-nav-btn {
