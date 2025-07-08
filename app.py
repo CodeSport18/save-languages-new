@@ -298,6 +298,53 @@ def upload_inline_audio():
             return jsonify({'success': False, 'error': 'Failed to upload audio to S3'})
     return jsonify({'success': False, 'error': f'Unsupported audio format. Please use: {", ".join(ALLOWED_AUDIO_EXTENSIONS)}'})
 
+@app.route('/edit_lesson/<lesson_id>', methods=['GET', 'POST'])
+@login_required
+def edit_lesson(lesson_id):
+    if not session.get('is_admin', False):
+        flash('Access denied', 'error')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        lesson = lessons_collection.find_one({'_id': ObjectId(lesson_id)})
+    except Exception:
+        lesson = None
+    
+    if not lesson:
+        flash('Lesson not found.', 'error')
+        return redirect(url_for('lessons'))
+    
+    if request.method == 'POST':
+        # Get new slides data
+        slide_contents = request.form.getlist('slide_content')
+        slide_image_urls = request.form.getlist('slide_image_url')
+        slide_audio_urls = request.form.getlist('slide_audio_url')
+        
+        # Create new slides array
+        new_slides = []
+        for i in range(len(slide_contents)):
+            slide = {
+                'content': slide_contents[i] if slide_contents[i] else None,
+                'image_url': slide_image_urls[i] if slide_image_urls[i] else None,
+                'audio_url': slide_audio_urls[i] if i < len(slide_audio_urls) and slide_audio_urls[i] else None
+            }
+            new_slides.append(slide)
+        
+        # Add new slides to existing slides
+        existing_slides = lesson.get('slides', [])
+        updated_slides = existing_slides + new_slides
+        
+        # Update the lesson
+        lessons_collection.update_one(
+            {'_id': ObjectId(lesson_id)},
+            {'$set': {'slides': updated_slides}}
+        )
+        
+        flash(f'Successfully added {len(new_slides)} new slide(s) to the lesson!', 'success')
+        return redirect(url_for('lesson_detail', lesson_id=lesson_id))
+    
+    return render_template('edit_lesson.html', lesson=lesson)
+
 @app.route('/delete_lesson/<lesson_id>')
 @login_required
 def delete_lesson(lesson_id):

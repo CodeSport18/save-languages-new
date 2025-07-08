@@ -82,6 +82,10 @@ translations = {
         'correct': 'Correct?',
         'unsupported_image_format': 'Unsupported image format. Please use: PNG, JPG, JPEG, GIF',
         'unsupported_audio_format': 'Unsupported audio format. Please use: MP3, WAV, M4A, OGG, WEBM',
+        'edit_lesson': 'Edit Lesson',
+        'new_slide': 'New Slide',
+        'add_slides_to_lesson': 'Add Slides to Lesson',
+        'current_slides': 'Current Slides',
     },
     'de': {
         'dashboard': 'Dashboard',

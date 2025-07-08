@@ -1,0 +1,471 @@
+{% extends "base.html" %}
+{% block title %}{{ t.edit_lesson }}{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h2>{{ t.edit_lesson }}: {{ lesson.title }}</h2>
+            <p class="text-muted mb-0">{{ t.current_slides }}: {{ lesson.slides|length }}</p>
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data" id="editLessonForm">
+                <div id="slides-container">
+                    <!-- First new slide -->
+                    <div class="slide-editor mb-4" data-slide="0">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4>{{ t.new_slide }} 1</h4>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSlide(this)">
+                                <i class="fas fa-trash"></i> {{ t.remove_slide }}
+                            </button>
+                        </div>
+                        
+                        <!-- Image Section -->
+                        <div class="slide-image-section mb-3">
+                            <label class="form-label fw-bold">{{ t.slide_image }}</label>
+                            <div class="image-upload-area" onclick="triggerImageUpload(0)">
+                                <div class="upload-placeholder" id="upload-placeholder-0">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <p>{{ t.click_to_upload_image }}</p>
+                                </div>
+                                <img class="uploaded-image" id="uploaded-image-0" style="display: none;">
+                            </div>
+                            <input type="file" class="slide-image-input" id="slide-image-0" style="display: none" accept="image/*" onchange="handleImageUpload(this, 0)">
+                            <input type="hidden" name="slide_image_url" class="slide-image-url">
+                        </div>
+                        
+                        <!-- Content Section -->
+                        <div class="slide-content-section">
+                            <label class="form-label fw-bold">{{ t.slide_content }}</label>
+                            <div class="form-control slide-content rich-editor" contenteditable="true" data-placeholder="{{ t.type_your_content_here }}" style="min-height: 150px; max-height: 400px; overflow-y: auto;"></div>
+                            <textarea class="form-control slide-content-hidden" name="slide_content" style="display: none;"></textarea>
+                        </div>
+                        
+                        <!-- Audio Upload Section -->
+                        <div class="slide-audio-section mb-3">
+                            <label class="form-label fw-bold">{{ t.slide_audio if t.slide_audio else 'Audio (How to say this sentence)' }}</label>
+                            <div class="audio-upload-area d-flex align-items-center gap-2">
+                                <input type="file" class="slide-audio-input" accept="audio/*" onchange="handleAudioUpload(this, 0)">
+                                <button type="button" class="btn btn-outline-primary btn-sm ml-2" onclick="openRecordModal(0)"><i class="fas fa-microphone"></i> Record Audio</button>
+                                <input type="hidden" name="slide_audio_url" class="slide-audio-url">
+                                <div class="audio-preview" style="display:none;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-secondary mb-3" onclick="addSlide()">
+                    {{ t.add_slide }}
+                </button>
+
+                <div class="form-group mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save mr-2"></i>{{ t.add_slides_to_lesson }}
+                    </button>
+                    <a href="{{ url_for('lesson_detail', lesson_id=lesson._id) }}" class="btn btn-outline-secondary ml-2">
+                        <i class="fas fa-times mr-2"></i>{{ t.cancel }}
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Audio Recording Modal -->
+<div class="modal fade" id="audioRecordModal" tabindex="-1" role="dialog" aria-labelledby="audioRecordModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="audioRecordModalLabel">Record Audio</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body text-center">
+        <p id="recordingStatus">Click the button to start recording.</p>
+        <button id="startRecordingBtn" class="btn btn-danger mb-2"><i class="fas fa-microphone"></i> Start Recording</button>
+        <button id="stopRecordingBtn" class="btn btn-secondary mb-2" style="display:none;"><i class="fas fa-stop"></i> Stop</button>
+        <div id="recordedAudioPreview" class="mt-3" style="display:none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="saveRecordingBtn" style="display:none;">Save to Slide</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.slide-editor {
+    border: 1px solid #ddd;
+    padding: 20px;
+    border-radius: 8px;
+    background: #f8f9fa;
+    margin-bottom: 20px;
+}
+
+.slide-image-section {
+    margin-bottom: 20px;
+}
+
+.image-upload-area {
+    border: 2px dashed #ced4da;
+    border-radius: 8px;
+    padding: 30px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.image-upload-area:hover {
+    border-color: #6c757d;
+    background: #f8f9fa;
+}
+
+.upload-placeholder {
+    color: #6c757d;
+}
+
+.upload-placeholder i {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    opacity: 0.6;
+}
+
+.upload-placeholder p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.uploaded-image {
+    max-width: 100%;
+    max-height: 300px;
+    width: auto;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.slide-content-section {
+    margin-top: 20px;
+}
+
+.rich-editor {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    background-color: #fff;
+    line-height: 1.5;
+    font-family: inherit;
+    font-size: 1rem;
+}
+
+.rich-editor:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.rich-editor:empty:before {
+    content: attr(data-placeholder);
+    color: #6c757d;
+    font-style: italic;
+}
+
+.rich-editor img {
+    max-width: 100%;
+    max-height: 400px;
+    width: auto;
+    height: auto;
+    display: inline-block;
+    margin: 0.5rem 0;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    vertical-align: middle;
+}
+
+.rich-editor p {
+    margin: 0.5rem 0;
+}
+
+.rich-editor br {
+    display: block;
+    content: "";
+    margin: 0.25rem 0;
+}
+
+.rich-editor audio {
+    max-width: 100%;
+    margin: 0.5rem 0;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+</style>
+
+<script>
+let slideCount = 1;
+let currentAudioSlideIndex = 0;
+let recordedChunks = [];
+let mediaRecorder = null;
+let savedSelection = null;
+
+// Initialize rich text editor functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const richEditors = document.querySelectorAll('.rich-editor');
+    richEditors.forEach(richEditor => {
+        richEditor.addEventListener('focus', function() {
+            savedSelection = window.getSelection();
+        });
+        
+        richEditor.addEventListener('blur', function() {
+            savedSelection = null;
+        });
+    });
+});
+
+function triggerImageUpload(slideIndex) {
+    document.getElementById(`slide-image-${slideIndex}`).click();
+}
+
+async function handleImageUpload(input, slideIndex) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    const slideEditor = input.closest('.slide-editor');
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    // Show loading state
+    const placeholder = document.getElementById(`upload-placeholder-${slideIndex}`);
+    const originalContent = placeholder.innerHTML;
+    placeholder.innerHTML = '<i class="fas fa-spinner fa-spin"></i><p>Uploading...</p>';
+    
+    try {
+        const response = await fetch('/upload_inline_image', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            // Update image display
+            const uploadedImage = document.getElementById(`uploaded-image-${slideIndex}`);
+            uploadedImage.src = data.url;
+            uploadedImage.style.display = 'block';
+            placeholder.style.display = 'none';
+            
+            // Store the URL
+            slideEditor.querySelector('.slide-image-url').value = data.url;
+            
+            // Show success message
+            showMessage(slideEditor, 'Image uploaded successfully!', 'success');
+        } else {
+            // Restore placeholder
+            placeholder.innerHTML = originalContent;
+            showMessage(slideEditor, data.error || 'Failed to upload image', 'danger');
+        }
+    } catch (error) {
+        placeholder.innerHTML = originalContent;
+        showMessage(slideEditor, 'Error uploading image. Please try again.', 'danger');
+    }
+}
+
+function showMessage(container, message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show mt-2`;
+    alertDiv.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}
+        <button type="button" class="close" data-dismiss="alert">
+            <span>&times;</span>
+        </button>
+    `;
+    container.appendChild(alertDiv);
+    
+    // Auto-dismiss after 3 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 3000);
+}
+
+function addSlide() {
+    slideCount++;
+    const container = document.getElementById('slides-container');
+    const newSlide = document.createElement('div');
+    newSlide.className = 'slide-editor mb-4';
+    newSlide.dataset.slide = slideCount - 1;
+    
+    newSlide.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4>{{ t.new_slide }} ${slideCount}</h4>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSlide(this)">
+                <i class="fas fa-trash"></i> {{ t.remove_slide }}
+            </button>
+        </div>
+        
+        <!-- Image Section -->
+        <div class="slide-image-section mb-3">
+            <label class="form-label fw-bold">{{ t.slide_image }}</label>
+            <div class="image-upload-area" onclick="triggerImageUpload(${slideCount - 1})">
+                <div class="upload-placeholder" id="upload-placeholder-${slideCount - 1}">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>{{ t.click_to_upload_image }}</p>
+                </div>
+                <img class="uploaded-image" id="uploaded-image-${slideCount - 1}" style="display: none;">
+            </div>
+            <input type="file" class="slide-image-input" id="slide-image-${slideCount - 1}" style="display: none" accept="image/*" onchange="handleImageUpload(this, ${slideCount - 1})">
+            <input type="hidden" name="slide_image_url" class="slide-image-url">
+        </div>
+        
+        <!-- Content Section -->
+        <div class="slide-content-section">
+            <label class="form-label fw-bold">{{ t.slide_content }}</label>
+            <div class="form-control slide-content rich-editor" contenteditable="true" data-placeholder="{{ t.type_your_content_here }}" style="min-height: 150px; max-height: 400px; overflow-y: auto;"></div>
+            <textarea class="form-control slide-content-hidden" name="slide_content" style="display: none;"></textarea>
+        </div>
+        
+        <!-- Audio Upload Section -->
+        <div class="slide-audio-section mb-3">
+            <label class="form-label fw-bold">{{ t.slide_audio if t.slide_audio else 'Audio (How to say this sentence)' }}</label>
+            <div class="audio-upload-area d-flex align-items-center gap-2">
+                <input type="file" class="slide-audio-input" accept="audio/*" onchange="handleAudioUpload(this, ${slideCount - 1})">
+                <button type="button" class="btn btn-outline-primary btn-sm ml-2" onclick="openRecordModal(${slideCount - 1})"><i class="fas fa-microphone"></i> Record Audio</button>
+                <input type="hidden" name="slide_audio_url" class="slide-audio-url">
+                <div class="audio-preview" style="display:none;"></div>
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(newSlide);
+    updateSlideNumbers();
+}
+
+function removeSlide(button) {
+    button.closest('.slide-editor').remove();
+    updateSlideNumbers();
+}
+
+function updateSlideNumbers() {
+    const slides = document.querySelectorAll('.slide-editor');
+    slides.forEach((slide, index) => {
+        slide.querySelector('h4').textContent = `{{ t.new_slide }} ${index + 1}`;
+        slide.dataset.slide = index;
+    });
+    slideCount = slides.length;
+}
+
+async function handleAudioUpload(input, slideIndex) {
+    const file = input.files[0];
+    if (!file) return;
+    const slideEditor = input.closest('.slide-editor');
+    const formData = new FormData();
+    formData.append('audio', file);
+    
+    // Show loading state
+    const audioPreview = slideEditor.querySelector('.audio-preview');
+    audioPreview.style.display = 'block';
+    audioPreview.innerHTML = '<span><i class="fas fa-spinner fa-spin"></i> Uploading...</span>';
+    
+    try {
+        const response = await fetch('/upload_inline_audio', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        if (data.success) {
+            // Store the URL
+            slideEditor.querySelector('.slide-audio-url').value = data.url;
+            // Show audio preview
+            audioPreview.innerHTML = `<audio controls src="${data.url}"></audio>`;
+        } else {
+            audioPreview.innerHTML = `<span class='text-danger'>${data.error || 'Failed to upload audio'}</span>`;
+        }
+    } catch (error) {
+        audioPreview.innerHTML = `<span class='text-danger'>Error uploading audio. Please try again.</span>`;
+    }
+}
+
+function openRecordModal(slideIndex) {
+    currentAudioSlideIndex = slideIndex;
+    $('#audioRecordModal').modal('show');
+    document.getElementById('recordingStatus').textContent = 'Click the button to start recording.';
+    document.getElementById('startRecordingBtn').style.display = '';
+    document.getElementById('stopRecordingBtn').style.display = 'none';
+    document.getElementById('saveRecordingBtn').style.display = 'none';
+    document.getElementById('recordedAudioPreview').style.display = 'none';
+    document.getElementById('recordedAudioPreview').innerHTML = '';
+}
+
+document.getElementById('startRecordingBtn').onclick = async function() {
+    recordedChunks = [];
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Audio recording is not supported in this browser or context. Please use a modern browser over HTTPS or localhost.');
+        return;
+    }
+    let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = function(e) {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+    mediaRecorder.onstop = function() {
+        let blob = new Blob(recordedChunks, { type: 'audio/webm' });
+        let url = URL.createObjectURL(blob);
+        let preview = document.getElementById('recordedAudioPreview');
+        preview.innerHTML = `<audio controls src="${url}"></audio>`;
+        preview.style.display = 'block';
+        document.getElementById('saveRecordingBtn').style.display = '';
+    };
+    mediaRecorder.start();
+    document.getElementById('recordingStatus').textContent = 'Recording...';
+    this.style.display = 'none';
+    document.getElementById('stopRecordingBtn').style.display = '';
+};
+
+document.getElementById('stopRecordingBtn').onclick = function() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        document.getElementById('recordingStatus').textContent = 'Recording stopped.';
+        this.style.display = 'none';
+    }
+};
+
+document.getElementById('saveRecordingBtn').onclick = async function() {
+    let blob = new Blob(recordedChunks, { type: 'audio/webm' });
+    let formData = new FormData();
+    formData.append('audio', blob, 'recording.webm');
+    let slideEditors = document.querySelectorAll('.slide-editor');
+    let slideEditor = slideEditors[currentAudioSlideIndex];
+    let audioPreview = slideEditor.querySelector('.audio-preview');
+    audioPreview.style.display = 'block';
+    audioPreview.innerHTML = '<span><i class="fas fa-spinner fa-spin"></i> Uploading...</span>';
+    try {
+        const response = await fetch('/upload_inline_audio', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        if (data.success) {
+            slideEditor.querySelector('.slide-audio-url').value = data.url;
+            audioPreview.innerHTML = `<audio controls src="${data.url}"></audio>`;
+        } else {
+            audioPreview.innerHTML = `<span class='text-danger'>${data.error || 'Failed to upload audio'}</span>`;
+        }
+    } catch (error) {
+        audioPreview.innerHTML = `<span class='text-danger'>Error uploading audio. Please try again.</span>`;
+    }
+    $('#audioRecordModal').modal('hide');
+};
+
+// Sync all rich editors before form submission
+document.getElementById('editLessonForm').addEventListener('submit', function(e) {
+    const richEditors = document.querySelectorAll('.rich-editor');
+    richEditors.forEach(richEditor => {
+        const hiddenTextarea = richEditor.parentElement.querySelector('.slide-content-hidden');
+        if (hiddenTextarea) {
+            hiddenTextarea.value = richEditor.innerHTML;
+        }
+    });
+});
+</script>
+{% endblock %} 
