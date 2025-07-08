@@ -148,7 +148,13 @@ def lesson_detail(lesson_id):
         lesson = None
     if not lesson:
         abort(404)
-    return render_template('lesson_detail.html', lesson=lesson)
+    # Fetch all lessons ordered by creation date (or title if you prefer)
+    lessons = list(lessons_collection.find().sort('date_created', 1))
+    lesson_ids = [str(l['_id']) for l in lessons]
+    current_idx = lesson_ids.index(str(lesson_id)) if str(lesson_id) in lesson_ids else -1
+    previous_lesson = lessons[current_idx - 1] if current_idx > 0 else None
+    next_lesson = lessons[current_idx + 1] if current_idx < len(lessons) - 1 else None
+    return render_template('lesson_detail.html', lesson=lesson, previous_lesson=previous_lesson, next_lesson=next_lesson)
 
 @app.route('/create_lesson', methods=['GET', 'POST'])
 @login_required
@@ -441,6 +447,21 @@ def reset_lesson_quiz(lesson_id):
     lessons_collection.update_one({'_id': ObjectId(lesson_id)}, {'$set': {'quiz': quiz}})
     flash('Quiz reset. You can take it again.', 'success')
     return redirect(url_for('lesson_detail', lesson_id=lesson_id))
+
+@app.route('/api/user/autoplay_sound', methods=['GET'])
+@login_required
+def get_autoplay_sound():
+    user = users_collection.find_one({'_id': ObjectId(session['user_id'])})
+    autoplay = user.get('autoplay_sound', False)
+    return jsonify({'autoplay_sound': bool(autoplay)})
+
+@app.route('/api/user/autoplay_sound', methods=['POST'])
+@login_required
+def set_autoplay_sound():
+    data = request.get_json()
+    autoplay = bool(data.get('autoplay_sound', False))
+    users_collection.update_one({'_id': ObjectId(session['user_id'])}, {'$set': {'autoplay_sound': autoplay}})
+    return jsonify({'success': True, 'autoplay_sound': autoplay})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)

@@ -2,8 +2,19 @@
 
 {% block content %}
 <div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="d-flex justify-content-start">
+            <a href="{{ url_for('lessons') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left mr-2"></i>{{ t.back_to_lessons }}
+            </a>
+        </div>
+        <div class="d-flex align-items-center">
+            <label class="autoplay-toggle-label mb-0 mr-2" for="autoplayToggle">Autoplay Sound</label>
+            <input type="checkbox" id="autoplayToggle" class="autoplay-toggle">
+        </div>
+    </div>
     <div class="card shadow-lg">
-        <div class="card-header bg-dark text-light">
+        <div class="card-header lesson-title-header">
             <h2 class="mb-0"><i class="fas fa-book-open mr-2"></i>{{ lesson.title }}</h2>
         </div>
         
@@ -12,12 +23,13 @@
                 <div id="lessonSlides" class="carousel slide" data-ride="carousel" data-interval="false">
                     <div class="carousel-inner">
                         {% for slide in lesson.slides %}
+                            {% set slide_idx = loop.index0 %}
                             <div class="carousel-item {% if loop.first %}active{% endif %}">
                                 <div class="slide-container">
                                     <!-- Image Section -->
                                     <div class="slide-image-section">
                                         {% if slide.image_url %}
-                                            <img src="{{ slide.image_url }}" alt="Slide {{ loop.index }}" class="slide-image">
+                                            <img src="{{ slide.image_url }}" alt="Slide {{ loop.index }}" class="slide-image larger-slide-image{% if not slide.content %} largest-slide-image{% endif %}">
                                         {% else %}
                                             <div class="no-image-placeholder">
                                                 <i class="fas fa-image"></i>
@@ -25,25 +37,32 @@
                                             </div>
                                         {% endif %}
                                     </div>
-                                    
+                                    <!-- Slide Indicators (dots) below image -->
+                                    <div class="slide-indicators-wrapper d-flex justify-content-center mb-3">
+                                        <ol class="carousel-indicators position-static m-0">
+                                            {% for s in lesson.slides %}
+                                                <li data-target="#lessonSlides" data-slide-to="{{ loop.index0 }}" class="{% if loop.index0 == slide_idx %}active{% endif %}"></li>
+                                            {% endfor %}
+                                        </ol>
+                                    </div>
                                     <!-- Text Content Section -->
-                                    <div class="slide-text-section">
+                                    <div class="slide-text-section{% if not slide.content %} no-text{% endif %}">
                                         {% if slide.content %}
                                             <div class="slide-content">
                                                 {{ slide.content|replace('\n', '<br>')|safe }}
                                             </div>
                                         {% endif %}
                                         {% if slide.audio_url %}
-                                            <div class="slide-audio-player mt-3 d-flex justify-content-center">
+                                            <div class="slide-audio-player mt-3 d-flex justify-content-center{% if not slide.content %} audio-lower{% endif %}">
                                                 <audio controls src="{{ slide.audio_url }}"></audio>
                                             </div>
                                         {% endif %}
                                     </div>
                                 </div>
-                                
                                 <div class="slide-indicator">
                                     <span class="slide-number">{{ loop.index }}</span>
-                                    <span class="slide-total">/ {{ lesson.slides|length + 1 }}</span>
+                                    <span class="slide-total">/ {{ lesson.slides|length
+                                        + ('quiz' in lesson and lesson.quiz and session.user_id and session.user_id not in lesson.quiz.completed_by and lesson.quiz.questions|length > 0) | int }}</span>
                                 </div>
                             </div>
                         {% endfor %}
@@ -88,6 +107,7 @@
                     </div>
                     
                     <!-- Modern Navigation Buttons -->
+                    {#
                     <button class="carousel-control-prev modern-nav-btn" type="button" data-target="#lessonSlides" data-slide="prev" id="carouselPrevBtn">
                         <div class="nav-btn-content">
                             <i class="fas fa-chevron-left"></i>
@@ -100,17 +120,7 @@
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </button>
-                    
-                    <!-- Slide Indicators -->
-                    <ol class="carousel-indicators">
-                        {% for slide in lesson.slides %}
-                            <li data-target="#lessonSlides" data-slide-to="{{ loop.index0 }}" 
-                                class="{% if loop.first %}active{% endif %}"></li>
-                        {% endfor %}
-                        {% if lesson.quiz and session.user_id and session.user_id not in lesson.quiz.completed_by %}
-                            <li data-target="#lessonSlides" data-slide-to="{{ lesson.slides|length }}"></li>
-                        {% endif %}
-                    </ol>
+                    #}
                 </div>
             </div>
         {% else %}
@@ -171,18 +181,22 @@
         
         <div class="card-footer bg-light">
             <div class="d-flex justify-content-between align-items-center">
-                <a href="{{ url_for('lessons') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left mr-2"></i>{{ t.back_to_lessons }}
-                </a>
+                <div>
+                    <button class="btn btn-outline-primary" id="footerPrevSlideBtn" style="display:none;">
+                        <i class="fas fa-arrow-left mr-2"></i> Previous
+                    </button>
+                </div>
                 <div>
                     {% if session.is_admin %}
                         <a href="{{ url_for('edit_lesson', lesson_id=lesson._id) }}" class="btn btn-warning mr-2">
                             <i class="fas fa-edit mr-2"></i>{{ t.edit_lesson }}
                         </a>
                     {% endif %}
-                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
-                        <i class="fas fa-home mr-2"></i>{{ t.go_to_dashboard }}
-                    </a>
+                </div>
+                <div>
+                    <button class="btn btn-outline-primary" id="footerNextSlideBtn" style="display:none;">
+                        Next <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -430,22 +444,72 @@
 
 /* Animation for slide transitions */
 .carousel-item {
-    transition: transform 0.4s ease-in-out;
+    /* transition: transform 0.4s ease-in-out; */
+    transition: none !important;
 }
 
 .carousel-item.active {
-    animation: slideIn 0.4s ease-out;
+    /* animation: slideIn 0.4s ease-out; */
 }
 
 @keyframes slideIn {
     from {
-        opacity: 0;
-        transform: translateX(20px);
+        opacity: 1;
+        transform: none;
     }
     to {
         opacity: 1;
-        transform: translateX(0);
+        transform: none;
     }
+}
+
+.larger-slide-image {
+    max-width: 350px;
+    max-height: 350px;
+}
+.slide-indicators-wrapper {
+    width: 100%;
+    margin-bottom: 10px;
+}
+.carousel-indicators.position-static {
+    position: static;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+.carousel-indicators li {
+    width: 10px;
+    height: 10px;
+}
+.slide-text-section.no-text {
+    min-height: 120px;
+    padding: 10px 20px 10px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.largest-slide-image {
+    max-width: 480px;
+    max-height: 480px;
+}
+.slide-audio-player.audio-lower {
+    margin-top: 0 !important;
+}
+.lesson-title-header {
+    background: #e1e5e9 !important;
+    color: #222 !important;
+    border-bottom: 1px solid #d1d5d8;
+}
+.autoplay-toggle-label {
+    font-weight: 500;
+    font-size: 1rem;
+    color: #444;
+}
+.autoplay-toggle {
+    width: 36px;
+    height: 20px;
+    accent-color: #2c3e50;
+    cursor: pointer;
 }
 </style>
 
@@ -542,6 +606,78 @@ document.addEventListener('DOMContentLoaded', function() {
     if (activeIndex === totalSlides - 1) {
         $('#carouselNextBtn').hide();
     }
+    
+    document.getElementById('footerPrevSlideBtn').onclick = function() {
+        $('#lessonSlides').carousel('prev');
+    };
+    document.getElementById('footerNextSlideBtn').onclick = function() {
+        $('#lessonSlides').carousel('next');
+    };
+
+    // Autoplay toggle logic (backend version)
+    const autoplayToggle = document.getElementById('autoplayToggle');
+    // Fetch initial state from backend
+    fetch('/api/user/autoplay_sound')
+        .then(res => res.json())
+        .then(data => {
+            autoplayToggle.checked = !!data.autoplay_sound;
+            tryAutoplayCurrentAudio();
+        });
+
+    function tryAutoplayCurrentAudio() {
+        if (!autoplayToggle.checked) return;
+        // Find the active carousel item
+        const activeSlide = document.querySelector('.carousel-item.active');
+        if (!activeSlide) return;
+        const audio = activeSlide.querySelector('audio');
+        if (audio) {
+            audio.currentTime = 0;
+            audio.play().catch(() => {});
+        }
+    }
+
+    // Save preference on toggle (to backend)
+    autoplayToggle.addEventListener('change', function() {
+        fetch('/api/user/autoplay_sound', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ autoplay_sound: autoplayToggle.checked })
+        });
+    });
+
+    // Listen for slide change events
+    $('#lessonSlides').on('slid.bs.carousel', function () {
+        tryAutoplayCurrentAudio();
+    });
+    // Also try on initial load (after fetch)
+    // tryAutoplayCurrentAudio();
+
+    function updateFooterNavButtons() {
+        const slides = document.querySelectorAll('.carousel-item');
+        const activeIdx = Array.from(slides).findIndex(slide => slide.classList.contains('active'));
+        const prevBtn = document.getElementById('footerPrevSlideBtn');
+        const nextBtn = document.getElementById('footerNextSlideBtn');
+        prevBtn.style.display = (activeIdx > 0) ? '' : 'none';
+        nextBtn.style.display = (activeIdx < slides.length - 1) ? '' : 'none';
+    }
+    $('#lessonSlides').on('slid.bs.carousel', function () {
+        updateFooterNavButtons();
+        tryAutoplayCurrentAudio && tryAutoplayCurrentAudio();
+        updateSlideCounter && updateSlideCounter();
+    });
+    updateFooterNavButtons();
+    // Slide counter fix
+    window.updateSlideCounter = function() {
+        const slides = document.querySelectorAll('.carousel-item');
+        const activeIdx = Array.from(slides).findIndex(slide => slide.classList.contains('active'));
+        const counter = document.querySelector('.slide-indicator .slide-number');
+        const total = document.querySelector('.slide-indicator .slide-total');
+        if (counter && total) {
+            counter.textContent = (activeIdx + 1);
+            total.textContent = '/ ' + slides.length;
+        }
+    };
+    updateSlideCounter();
 });
 
 // Fireworks and Liberty Bell functions (if needed)
