@@ -10,47 +10,48 @@
         <div class="card-body">
             <form method="POST" enctype="multipart/form-data" id="editLessonForm">
                 <div id="slides-container">
-                    <!-- First new slide -->
-                    <div class="slide-editor mb-4" data-slide="0">
+                    {% for slide in lesson.slides %}
+                    <div class="slide-editor mb-4" data-slide="existing-{{ loop.index0 }}">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h4>{{ t.new_slide }} 1</h4>
+                            <h4>{{ t.slide }} {{ loop.index }}</h4>
                             <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSlide(this)">
                                 <i class="fas fa-trash"></i> {{ t.remove_slide }}
                             </button>
                         </div>
-                        
                         <!-- Image Section -->
                         <div class="slide-image-section mb-3">
                             <label class="form-label fw-bold">{{ t.slide_image }}</label>
-                            <div class="image-upload-area" onclick="triggerImageUpload(0)">
-                                <div class="upload-placeholder" id="upload-placeholder-0">
+                            <div class="image-upload-area" onclick="triggerImageUpload('existing-{{ loop.index0 }}')">
+                                <div class="upload-placeholder" id="upload-placeholder-existing-{{ loop.index0 }}" style="display: {{ 'none' if slide.image_url else 'block' }};">
                                     <i class="fas fa-cloud-upload-alt"></i>
                                     <p>{{ t.click_to_upload_image }}</p>
                                 </div>
-                                <img class="uploaded-image" id="uploaded-image-0" style="display: none;">
+                                <img class="uploaded-image" id="uploaded-image-existing-{{ loop.index0 }}" src="{{ slide.image_url }}" style="display: {{ 'block' if slide.image_url else 'none' }};">
                             </div>
-                            <input type="file" class="slide-image-input" id="slide-image-0" style="display: none" accept="image/*" onchange="handleImageUpload(this, 0)">
-                            <input type="hidden" name="slide_image_url" class="slide-image-url">
+                            <input type="file" class="slide-image-input" id="slide-image-existing-{{ loop.index0 }}" style="display: none" accept="image/*" onchange="handleImageUpload(this, 'existing-{{ loop.index0 }}')">
+                            <input type="hidden" name="slide_image_url" class="slide-image-url" value="{{ slide.image_url }}">
                         </div>
-                        
                         <!-- Content Section -->
                         <div class="slide-content-section">
                             <label class="form-label fw-bold">{{ t.slide_content }}</label>
-                            <div class="form-control slide-content rich-editor" contenteditable="true" data-placeholder="{{ t.type_your_content_here }}" style="min-height: 150px; max-height: 400px; overflow-y: auto;"></div>
-                            <textarea class="form-control slide-content-hidden" name="slide_content" style="display: none;"></textarea>
+                            <div class="form-control slide-content rich-editor" contenteditable="true" data-placeholder="{{ t.type_your_content_here }}" style="min-height: 150px; max-height: 400px; overflow-y: auto;">{{ slide.content|safe }}</div>
+                            <textarea class="form-control slide-content-hidden" name="slide_content" style="display: none;">{{ slide.content }}</textarea>
                         </div>
-                        
                         <!-- Audio Upload Section -->
                         <div class="slide-audio-section mb-3">
                             <label class="form-label fw-bold">{{ t.slide_audio if t.slide_audio else 'Audio (How to say this sentence)' }}</label>
                             <div class="audio-upload-area d-flex align-items-center gap-2">
-                                <input type="file" class="slide-audio-input" accept="audio/*" onchange="handleAudioUpload(this, 0)">
-                                <button type="button" class="btn btn-outline-primary btn-sm ml-2" onclick="openRecordModal(0)"><i class="fas fa-microphone"></i> Record Audio</button>
-                                <input type="hidden" name="slide_audio_url" class="slide-audio-url">
-                                <div class="audio-preview" style="display:none;"></div>
+                                <input type="file" class="slide-audio-input" accept="audio/*" onchange="handleAudioUpload(this, 'existing-{{ loop.index0 }}')">
+                                <button type="button" class="btn btn-outline-primary btn-sm ml-2" onclick="openRecordModal('existing-{{ loop.index0 }}')"><i class="fas fa-microphone"></i> Record Audio</button>
+                                <input type="hidden" name="slide_audio_url" class="slide-audio-url" value="{{ slide.audio_url }}">
+                                <div class="audio-preview" style="display:{{ 'block' if slide.audio_url else 'none' }};">
+                                    {% if slide.audio_url %}<audio controls src="{{ slide.audio_url }}"></audio>{% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>
+                    {% endfor %}
+                    <!-- New slides will be appended here by JS -->
                 </div>
 
                 <button type="button" class="btn btn-secondary mb-3" onclick="addSlide()">
@@ -203,7 +204,7 @@
 </style>
 
 <script>
-let slideCount = 1;
+let slideCount = document.querySelectorAll('.slide-editor').length;
 let currentAudioSlideIndex = 0;
 let recordedChunks = [];
 let mediaRecorder = null;
@@ -224,7 +225,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function triggerImageUpload(slideIndex) {
-    document.getElementById(`slide-image-${slideIndex}`).click();
+    let idx = (typeof slideIndex === 'string' && slideIndex.startsWith('existing-')) ? parseInt(slideIndex.replace('existing-', '')) : slideIndex;
+    document.getElementById(`slide-image-existing-${idx}`) ? document.getElementById(`slide-image-existing-${idx}`).click() : document.getElementById(`slide-image-${idx}`).click();
 }
 
 async function handleImageUpload(input, slideIndex) {
@@ -236,7 +238,8 @@ async function handleImageUpload(input, slideIndex) {
     formData.append('image', file);
     
     // Show loading state
-    const placeholder = document.getElementById(`upload-placeholder-${slideIndex}`);
+    let idx = (typeof slideIndex === 'string' && slideIndex.startsWith('existing-')) ? parseInt(slideIndex.replace('existing-', '')) : slideIndex;
+    const placeholder = document.getElementById(`upload-placeholder-existing-${idx}`) || document.getElementById(`upload-placeholder-${idx}`);
     const originalContent = placeholder.innerHTML;
     placeholder.innerHTML = '<i class="fas fa-spinner fa-spin"></i><p>Uploading...</p>';
     
@@ -249,7 +252,7 @@ async function handleImageUpload(input, slideIndex) {
         
         if (data.success) {
             // Update image display
-            const uploadedImage = document.getElementById(`uploaded-image-${slideIndex}`);
+            const uploadedImage = document.getElementById(`uploaded-image-existing-${idx}`) || document.getElementById(`uploaded-image-${idx}`);
             uploadedImage.src = data.url;
             uploadedImage.style.display = 'block';
             placeholder.style.display = 'none';
@@ -298,7 +301,7 @@ function addSlide() {
     
     newSlide.innerHTML = `
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4>{{ t.new_slide }} ${slideCount}</h4>
+            <h4>{{ t.slide }} ${slideCount}</h4>
             <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSlide(this)">
                 <i class="fas fa-trash"></i> {{ t.remove_slide }}
             </button>
@@ -349,7 +352,7 @@ function removeSlide(button) {
 function updateSlideNumbers() {
     const slides = document.querySelectorAll('.slide-editor');
     slides.forEach((slide, index) => {
-        slide.querySelector('h4').textContent = `{{ t.new_slide }} ${index + 1}`;
+        slide.querySelector('h4').textContent = `{{ t.slide }} ${index + 1}`;
         slide.dataset.slide = index;
     });
     slideCount = slides.length;
@@ -363,6 +366,7 @@ async function handleAudioUpload(input, slideIndex) {
     formData.append('audio', file);
     
     // Show loading state
+    let idx = (typeof slideIndex === 'string' && slideIndex.startsWith('existing-')) ? parseInt(slideIndex.replace('existing-', '')) : slideIndex;
     const audioPreview = slideEditor.querySelector('.audio-preview');
     audioPreview.style.display = 'block';
     audioPreview.innerHTML = '<span><i class="fas fa-spinner fa-spin"></i> Uploading...</span>';

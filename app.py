@@ -321,32 +321,28 @@ def edit_lesson(lesson_id):
         return redirect(url_for('lessons'))
     
     if request.method == 'POST':
-        # Get new slides data
+        # Get all slides data (existing and new)
         slide_contents = request.form.getlist('slide_content')
         slide_image_urls = request.form.getlist('slide_image_url')
         slide_audio_urls = request.form.getlist('slide_audio_url')
-        
+
         # Create new slides array
-        new_slides = []
+        updated_slides = []
         for i in range(len(slide_contents)):
             slide = {
                 'content': slide_contents[i] if slide_contents[i] else None,
-                'image_url': slide_image_urls[i] if slide_image_urls[i] else None,
+                'image_url': slide_image_urls[i] if i < len(slide_image_urls) and slide_image_urls[i] else None,
                 'audio_url': slide_audio_urls[i] if i < len(slide_audio_urls) and slide_audio_urls[i] else None
             }
-            new_slides.append(slide)
-        
-        # Add new slides to existing slides
-        existing_slides = lesson.get('slides', [])
-        updated_slides = existing_slides + new_slides
-        
-        # Update the lesson
+            updated_slides.append(slide)
+
+        # Replace the lesson's slides with the updated slides
         lessons_collection.update_one(
             {'_id': ObjectId(lesson_id)},
             {'$set': {'slides': updated_slides}}
         )
-        
-        flash(f'Successfully added {len(new_slides)} new slide(s) to the lesson!', 'success')
+
+        flash(f'Successfully updated slides for the lesson!', 'success')
         return redirect(url_for('lesson_detail', lesson_id=lesson_id))
     
     return render_template('edit_lesson.html', lesson=lesson)
