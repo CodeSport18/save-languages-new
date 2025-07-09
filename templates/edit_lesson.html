@@ -34,8 +34,8 @@
                         <!-- Content Section -->
                         <div class="slide-content-section">
                             <label class="form-label fw-bold">{{ t.slide_content }}</label>
-                            <div class="form-control slide-content rich-editor" contenteditable="true" data-placeholder="{{ t.type_your_content_here }}" style="min-height: 150px; max-height: 400px; overflow-y: auto;">{{ slide.content|safe }}</div>
-                            <textarea class="form-control slide-content-hidden" name="slide_content" style="display: none;">{{ slide.content }}</textarea>
+                            <div class="form-control slide-content rich-editor" contenteditable="true" data-placeholder="{{ t.type_your_content_here }}" style="min-height: 150px; max-height: 400px; overflow-y: auto;">{% if slide.content %}{{ slide.content|safe }}{% endif %}</div>
+                            <textarea class="form-control slide-content-hidden" name="slide_content" style="display: none;">{% if slide.content %}{{ slide.content }}{% endif %}</textarea>
                         </div>
                         <!-- Audio Upload Section -->
                         <div class="slide-audio-section mb-3">

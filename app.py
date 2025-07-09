@@ -11,6 +11,7 @@ import time
 import boto3
 from botocore.exceptions import ClientError
 import datetime
+import re
 load_dotenv()
 
 app = Flask(__name__)
@@ -56,6 +57,16 @@ def upload_to_s3(file, filename):
     except ClientError as e:
         print(f"Error uploading to S3: {e}")
         return None
+
+def sanitize_slide_content(content):
+    if not content:
+        return None
+    # Remove HTML tags and whitespace
+    text = re.sub(r'<[^>]*>', '', content)
+    text = text.replace('&nbsp;', '').strip()
+    if not text:
+        return None
+    return content
 
 def login_required(f):
     @wraps(f)
@@ -174,8 +185,9 @@ def create_lesson():
         # Create slides array with image, content, and audio
         slides = []
         for i in range(len(slide_contents)):
+            clean_content = sanitize_slide_content(slide_contents[i])
             slide = {
-                'content': slide_contents[i] if slide_contents[i] else None,
+                'content': clean_content,
                 'image_url': slide_image_urls[i] if slide_image_urls[i] else None,
                 'audio_url': slide_audio_urls[i] if i < len(slide_audio_urls) and slide_audio_urls[i] else None
             }
@@ -329,8 +341,9 @@ def edit_lesson(lesson_id):
         # Create new slides array
         updated_slides = []
         for i in range(len(slide_contents)):
+            clean_content = sanitize_slide_content(slide_contents[i])
             slide = {
-                'content': slide_contents[i] if slide_contents[i] else None,
+                'content': clean_content,
                 'image_url': slide_image_urls[i] if i < len(slide_image_urls) and slide_image_urls[i] else None,
                 'audio_url': slide_audio_urls[i] if i < len(slide_audio_urls) and slide_audio_urls[i] else None
             }
