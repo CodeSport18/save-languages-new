@@ -625,6 +625,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
     function tryAutoplayCurrentAudio() {
+        // Pause and reset all audio elements first
+        document.querySelectorAll('audio').forEach(audio => {
+            audio.pause();
+            audio.currentTime = 0;
+        });
         if (!autoplayToggle.checked) return;
         // Find the active carousel item
         const activeSlide = document.querySelector('.carousel-item.active');
