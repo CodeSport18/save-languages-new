@@ -23,6 +23,7 @@ client = MongoClient(mongo_uri, tlsAllowInvalidCertificates=True)
 db = client['koshur']
 lessons_collection = db['lessons']
 users_collection = db['users']
+quizzes_collection = db['quizzes']
 
 # AWS S3 configuration
 s3_client = boto3.client(
@@ -94,7 +95,12 @@ def before_request():
 
 @app.context_processor
 def inject_translations():
-    return {'t': g.t}
+    def format_date(date_obj):
+        if date_obj:
+            return date_obj.strftime('%B %d, %Y')
+        return ''
+    
+    return {'t': g.t, 'format_date': format_date}
 
 @app.route('/')
 def homepage():
@@ -142,7 +148,29 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    return render_template('dashboard.html')
+    user_id = str(session['user_id'])
+    
+    # Get completed lessons (simplified - you may want to add a completed_lessons collection)
+    completed_lessons = []
+    
+    # Get quiz results
+    quizzes = list(quizzes_collection.find())
+    quiz_results = []
+    
+    for quiz in quizzes:
+        if 'results' in quiz and user_id in quiz['results']:
+            result = quiz['results'][user_id]
+            quiz_results.append({
+                'quiz_title': quiz['title'],
+                'score': f"{result['score']}/{result['total_questions']}",
+                'percentage': result['percentage'],
+                'date_taken': quiz['date_created']
+            })
+    
+    # Sort by date taken (most recent first)
+    quiz_results.sort(key=lambda x: x['date_taken'], reverse=True)
+    
+    return render_template('dashboard.html', completed_lessons=completed_lessons, quiz_results=quiz_results)
 
 @app.route('/lessons')
 @login_required
@@ -243,20 +271,173 @@ def create_lesson():
 @app.route('/quizzes')
 @login_required
 def quizzes():
-    return render_template('quizzes.html')
+    # Get all quizzes
+    quizzes = list(quizzes_collection.find().sort('date_created', -1))
+    
+    # Get user's completed quizzes
+    user_id = str(session['user_id'])
+    completed_quizzes = []
+    
+    for quiz in quizzes:
+        if 'completed_by' in quiz and user_id in quiz['completed_by']:
+            completed_quizzes.append(str(quiz['_id']))
+    
+    return render_template('quizzes.html', quizzes=quizzes, completed_quizzes=completed_quizzes)
 
-@app.route('/create_quiz')
+@app.route('/create_quiz', methods=['GET', 'POST'])
 @login_required
 def create_quiz():
     if not session.get('is_admin', False):
         flash('Access denied', 'error')
         return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        title = request.form.get('quiz_title')
+        
+        # Get quiz questions with new structure
+        questions = request.form.getlist('quiz_questions[]')
+        answers = request.form.getlist('quiz_answers[]')
+        types = request.form.getlist('quiz_question_types[]')
+        
+        quiz_questions = []
+        for idx, q in enumerate(questions):
+            q_type = types[idx] if idx < len(types) else 'short_answer'
+            q_obj = {
+                'question': q,
+                'type': q_type,
+                'answer': answers[idx] if idx < len(answers) else ''
+            }
+            if q_type == 'multiple_choice':
+                # Collect all options for this question
+                options = []
+                opt_idx = 1
+                while True:
+                    opt_key = f'quiz_option_{opt_idx}[]'
+                    opt_vals = request.form.getlist(opt_key)
+                    if not opt_vals:
+                        break
+                    # Each opt_vals is a list, one value per question block
+                    if len(opt_vals) > idx:
+                        options.append(opt_vals[idx])
+                    opt_idx += 1
+                q_obj['options'] = options
+            quiz_questions.append(q_obj)
+        
+        # Create quiz document
+        quiz = {
+            'title': title,
+            'questions': quiz_questions,
+            'date_created': datetime.datetime.utcnow(),
+            'completed_by': []
+        }
+        
+        quizzes_collection.insert_one(quiz)
+        flash('Independent quiz created successfully!', 'success')
+        return redirect(url_for('quizzes'))
+    
     return render_template('create_quiz.html')
 
-@app.route('/take_quiz/<int:quiz_id>')
+@app.route('/take_quiz/<quiz_id>', methods=['GET', 'POST'])
 @login_required
 def take_quiz(quiz_id):
-    return render_template('take_quiz.html')
+    try:
+        quiz = quizzes_collection.find_one({'_id': ObjectId(quiz_id)})
+    except Exception:
+        quiz = None
+    
+    if not quiz:
+        flash('Quiz not found.', 'error')
+        return redirect(url_for('quizzes'))
+    
+    user_id = str(session['user_id'])
+    
+    # Check if user has already completed this quiz
+    if 'completed_by' in quiz and user_id in quiz['completed_by']:
+        # Show results if already completed
+        if 'results' in quiz and user_id in quiz['results']:
+            result = quiz['results'][user_id]
+            return render_template('take_quiz.html', quiz=quiz, result=result, completed=True)
+    
+    if request.method == 'POST':
+        questions = quiz['questions']
+        user_answers = request.form.getlist('answers[]')
+        score = 0
+        total = len(questions)
+        results = []
+
+        for idx, q in enumerate(questions):
+            q_type = q.get('type', 'short_answer')
+            correct = False
+            user_answer = user_answers[idx].strip() if idx < len(user_answers) else ''
+            correct_answer = q.get('answer', '').strip()
+            
+            if q_type == 'short_answer':
+                correct = user_answer.lower().strip() == correct_answer.lower().strip()
+            elif q_type == 'multiple_choice':
+                # For MC, user_answer is the selected option index (1-based as string), correct_answer is also 1-based as string
+                correct = user_answer == correct_answer
+                # For review, show the option text
+                user_answer_text = q['options'][int(user_answer)-1] if user_answer.isdigit() and 1 <= int(user_answer) <= len(q['options']) else user_answer
+                correct_answer_text = q['options'][int(correct_answer)-1] if correct_answer.isdigit() and 1 <= int(correct_answer) <= len(q['options']) else correct_answer
+            elif q_type == 'true_false':
+                correct = user_answer.lower() == correct_answer.lower()
+                user_answer_text = user_answer.capitalize()
+                correct_answer_text = correct_answer.capitalize()
+            else:
+                user_answer_text = user_answer
+                correct_answer_text = correct_answer
+            
+            if q_type == 'multiple_choice' or q_type == 'true_false':
+                results.append({'question': q['question'], 'your_answer': user_answer_text, 'correct_answer': correct_answer_text, 'is_correct': correct})
+            else:
+                results.append({'question': q['question'], 'your_answer': user_answer, 'correct_answer': correct_answer, 'is_correct': correct})
+            
+            if correct:
+                score += 1
+
+        # Store result in quiz document (per user)
+        if 'results' not in quiz:
+            quiz['results'] = {}
+        quiz['results'][user_id] = {
+            'score': score,
+            'total_questions': total,
+            'percentage': (score / total) * 100 if total else 0,
+            'details': results
+        }
+        if 'completed_by' not in quiz:
+            quiz['completed_by'] = []
+        if user_id not in quiz['completed_by']:
+            quiz['completed_by'].append(user_id)
+        
+        quizzes_collection.update_one({'_id': ObjectId(quiz_id)}, {'$set': quiz})
+        flash(f'Quiz submitted! Your score: {score}/{total}', 'success')
+        return redirect(url_for('take_quiz', quiz_id=quiz_id))
+    
+    return render_template('take_quiz.html', quiz=quiz, completed=False)
+
+@app.route('/reset_quiz/<quiz_id>', methods=['POST'])
+@login_required
+def reset_quiz(quiz_id):
+    try:
+        quiz = quizzes_collection.find_one({'_id': ObjectId(quiz_id)})
+    except Exception:
+        quiz = None
+    
+    if not quiz:
+        flash('Quiz not found.', 'error')
+        return redirect(url_for('quizzes'))
+
+    user_id = str(session['user_id'])
+    
+    # Remove user from completed_by and results
+    if 'completed_by' in quiz and user_id in quiz['completed_by']:
+        quiz['completed_by'].remove(user_id)
+    if 'results' in quiz and user_id in quiz['results']:
+        del quiz['results'][user_id]
+    
+    quizzes_collection.update_one({'_id': ObjectId(quiz_id)}, {'$set': quiz})
+    flash('Quiz reset. You can take it again.', 'success')
+    return redirect(url_for('take_quiz', quiz_id=quiz_id))
 
 @app.route('/lesson_history')
 @login_required
@@ -266,7 +447,26 @@ def lesson_history():
 @app.route('/quiz_history')
 @login_required
 def quiz_history():
-    return render_template('quiz_history.html')
+    user_id = str(session['user_id'])
+    
+    # Get all quizzes and filter for user's results
+    quizzes = list(quizzes_collection.find())
+    quiz_results = []
+    
+    for quiz in quizzes:
+        if 'results' in quiz and user_id in quiz['results']:
+            result = quiz['results'][user_id]
+            quiz_results.append({
+                'quiz_title': quiz['title'],
+                'score': f"{result['score']}/{result['total_questions']}",
+                'percentage': result['percentage'],
+                'date_taken': quiz['date_created']  # Using quiz creation date as approximation
+            })
+    
+    # Sort by date taken (most recent first)
+    quiz_results.sort(key=lambda x: x['date_taken'], reverse=True)
+    
+    return render_template('quiz_history.html', quiz_results=quiz_results)
 
 @app.route('/change_language/<language>')
 def change_language(language):

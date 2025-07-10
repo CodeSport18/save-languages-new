@@ -21,7 +21,7 @@
                             <td>{{ result.quiz_title }}</td>
                             <td>{{ result.score }}</td>
                             <td>{{ "%.1f"|format(result.percentage) }}%</td>
-                            <td>{{ g.format_date(result.date_taken) }}</td>
+                            <td>{{ format_date(result.date_taken) }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>

@@ -7,17 +7,73 @@
             <h2>{{ quiz.title }}</h2>
         </div>
         <div class="card-body">
-            <form method="POST">
-    {% for question in quiz.questions %}
-                    <div class="mb-4">
-                        <h5>{{ t.question }} {{ loop.index }}:</h5>
-                        <p>{{ question }}</p>
-                        <input type="text" name="answers" class="form-control" required>
-      </div>
-    {% endfor %}
-                <button type="submit" class="btn btn-primary">{{ t.submit_quiz }}</button>
-                <a href="{{ url_for('view_quizzes') }}" class="btn btn-secondary">{{ t.back_to_quizzes }}</a>
-  </form>
+            {% if completed and result %}
+                <!-- Show completed quiz results -->
+                <div class="alert alert-success">
+                    {{ t.quiz_completed }}
+                </div>
+                <p><strong>{{ t.your_score }}:</strong> {{ result.score }}/{{ result.total_questions }}
+                   ({{ "%.1f"|format(result.percentage) }}%)</p>
+                
+                <form method="POST" action="{{ url_for('reset_quiz', quiz_id=quiz._id) }}" 
+                      onsubmit="return confirm('{{ t.confirm_reset_quiz }}');" style="display: inline;">
+                    <button type="submit" class="btn btn-outline-secondary mb-3">
+                        {{ t.retake_quiz }}
+                    </button>
+                </form>
+                
+                <hr>
+                <h5>Review Answers</h5>
+                <table class="table table-bordered table-sm mt-3">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>#</th>
+                            <th>{{ t.question }}</th>
+                            <th>{{ t.your_answer }}</th>
+                            <th>{{ t.correct_answer }}</th>
+                            <th>{{ t.correct }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in result.details %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ r.question }}</td>
+                            <td>{{ r.your_answer }}</td>
+                            <td>{{ r.correct_answer }}</td>
+                            <td>{% if r.is_correct %}<span class="text-success">&#10003;</span>{% else %}<span class="text-danger">&#10007;</span>{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <!-- Show quiz form -->
+                <form method="POST">
+                    {% for q in quiz.questions %}
+                        {% set q_idx = loop.index0 %}
+                        <div class="form-group mb-4">
+                            <label><b>{{ t.question }} {{ loop.index }}:</b> {{ q.question }}</label>
+                            {% if q.type == 'short_answer' or not q.type %}
+                            <input type="text" name="answers[]" class="form-control" required>
+                            {% elif q.type == 'multiple_choice' %}
+                                {% for opt in q.options %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="answers[]" id="q{{ q_idx }}_opt{{ loop.index0 }}" value="{{ loop.index }}" required>
+                                        <label class="form-check-label" for="q{{ q_idx }}_opt{{ loop.index0 }}">{{ opt }}</label>
+                                    </div>
+                                {% endfor %}
+                            {% elif q.type == 'true_false' %}
+                                <select name="answers[]" class="form-control" required>
+                                    <option value="True">True</option>
+                                    <option value="False">False</option>
+                                </select>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-primary">{{ t.submit_quiz }}</button>
+                    <a href="{{ url_for('quizzes') }}" class="btn btn-secondary">{{ t.back_to_quizzes }}</a>
+                </form>
+            {% endif %}
         </div>
     </div>
 </div>
