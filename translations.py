@@ -67,6 +67,8 @@ translations = {
         'slide_image': 'Slide Image',
         'slide_content': 'Slide Content',
         'click_to_upload_image': 'Click to upload image',
+        'drag_drop_hint': 'or drag and drop an image here',
+        'edit_lesson': 'Edit Lesson',
         'type_your_content_here': 'Type your content here...',
         'previous': 'Previous',
         'next': 'Next',

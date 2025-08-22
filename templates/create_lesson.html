@@ -26,10 +26,15 @@
                         <!-- Image Section -->
                         <div class="slide-image-section mb-3">
                             <label class="form-label fw-bold">{{ t.slide_image }}</label>
-                            <div class="image-upload-area" onclick="triggerImageUpload(0)">
+                            <div class="image-upload-area" 
+                                 onclick="triggerImageUpload(0)"
+                                 ondragover="handleDragOver(event, 0)"
+                                 ondragleave="handleDragLeave(event, 0)"
+                                 ondrop="handleDrop(event, 0)">
                                 <div class="upload-placeholder" id="upload-placeholder-0">
                                     <i class="fas fa-cloud-upload-alt"></i>
                                     <p>{{ t.click_to_upload_image }}</p>
+                                    <p class="drag-drop-hint">{{ t.drag_drop_hint if t.drag_drop_hint else 'or drag and drop an image here' }}</p>
                                 </div>
                                 <img class="uploaded-image" id="uploaded-image-0" style="display: none;">
                             </div>
@@ -164,6 +169,20 @@
 .image-upload-area:hover {
     border-color: #6c757d;
     background: #f8f9fa;
+}
+
+.image-upload-area.drag-over {
+    border-color: #007bff;
+    background: #e3f2fd;
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(0, 123, 255, 0.3);
+}
+
+.drag-drop-hint {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 5px;
+    font-style: italic;
 }
 
 .upload-placeholder {
@@ -456,10 +475,15 @@ function addSlide() {
         <!-- Image Section -->
         <div class="slide-image-section mb-3">
             <label class="form-label fw-bold">${t.slide_image || 'Slide Image'}</label>
-            <div class="image-upload-area" onclick="triggerImageUpload(${slideCount - 1})">
+            <div class="image-upload-area" 
+                 onclick="triggerImageUpload(${slideCount - 1})"
+                 ondragover="handleDragOver(event, ${slideCount - 1})"
+                 ondragleave="handleDragLeave(event, ${slideCount - 1})"
+                 ondrop="handleDrop(event, ${slideCount - 1})">
                 <div class="upload-placeholder" id="upload-placeholder-${slideCount - 1}">
                     <i class="fas fa-cloud-upload-alt"></i>
                     <p>${t.click_to_upload_image || 'Click to upload image'}</p>
+                    <p class="drag-drop-hint">${t.drag_drop_hint || 'or drag and drop an image here'}</p>
                 </div>
                 <img class="uploaded-image" id="uploaded-image-${slideCount - 1}" style="display: none;">
             </div>
@@ -597,6 +621,88 @@ function showMessage(container, message, type) {
             alertDiv.remove();
                         }
                     }, 3000);
+}
+
+// Drag and Drop Functions
+function handleDragOver(event, slideIndex) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const uploadArea = event.currentTarget;
+    uploadArea.classList.add('drag-over');
+    
+    // Update placeholder text
+    const placeholder = document.getElementById(`upload-placeholder-${slideIndex}`);
+    if (placeholder) {
+        const icon = placeholder.querySelector('i');
+        const text = placeholder.querySelector('p:not(.drag-drop-hint)');
+        const hint = placeholder.querySelector('.drag-drop-hint');
+        
+        if (icon) icon.className = 'fas fa-cloud-download-alt';
+        if (text) text.textContent = 'Drop image here';
+        if (hint) hint.style.display = 'none';
+    }
+}
+
+function handleDragLeave(event, slideIndex) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const uploadArea = event.currentTarget;
+    uploadArea.classList.remove('drag-over');
+    
+    // Restore placeholder text
+    const placeholder = document.getElementById(`upload-placeholder-${slideIndex}`);
+    if (placeholder) {
+        const icon = placeholder.querySelector('i');
+        const text = placeholder.querySelector('p:not(.drag-drop-hint)');
+        const hint = placeholder.querySelector('.drag-drop-hint');
+        
+        if (icon) icon.className = 'fas fa-cloud-upload-alt';
+        if (text) text.textContent = 'Click to upload image';
+        if (hint) hint.style.display = 'block';
+    }
+}
+
+function handleDrop(event, slideIndex) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const uploadArea = event.currentTarget;
+    uploadArea.classList.remove('drag-over');
+    
+    // Restore placeholder text
+    const placeholder = document.getElementById(`upload-placeholder-${slideIndex}`);
+    if (placeholder) {
+        const icon = placeholder.querySelector('i');
+        const text = placeholder.querySelector('p:not(.drag-drop-hint)');
+        const hint = placeholder.querySelector('.drag-drop-hint');
+        
+        if (icon) icon.className = 'fas fa-cloud-upload-alt';
+        if (text) text.textContent = 'Click to upload image';
+        if (hint) hint.style.display = 'block';
+    }
+    
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+        const file = files[0];
+        
+        // Check if it's an image file
+        if (file.type.startsWith('image/')) {
+            // Create a FileList-like object to pass to handleImageUpload
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            
+            // Get the file input and set its files
+            const fileInput = document.getElementById(`slide-image-${slideIndex}`);
+            fileInput.files = dataTransfer.files;
+            
+            // Trigger the upload
+            handleImageUpload(fileInput, slideIndex);
+        } else {
+            showMessage(uploadArea.closest('.slide-editor'), 'Please drop an image file', 'warning');
+        }
+    }
 }
 
 // Quiz functionality
