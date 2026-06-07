@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2>Available Lessons</h2>
+    <h2>{{ t.available_lessons }}</h2>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -18,9 +18,14 @@
                 <div class="col-md-6 mb-4">
                     <div class="card">
                         <div class="card-body">
-                            <h5 class="card-title">{{ lesson.title }}</h5>
+                            <h5 class="card-title">
+                                {{ lesson.title }}
+                                {% if lesson._id|string in completed_lesson_ids %}
+                                    <span class="badge badge-success ml-2">{{ t.completed }}</span>
+                                {% endif %}
+                            </h5>
                             <p class="card-text text-muted">
-                                Created on:
+                                {{ t.created_on }}:
                                 {% if lesson.date_created and lesson.date_created.strftime %}
                                     {{ lesson.date_created.strftime('%B %d, %Y') }}
                                 {% else %}
@@ -28,7 +33,9 @@
                                 {% endif %}
                             </p>
                             <div class="d-flex justify-content-between">
-                                <a href="{{ url_for('lesson_detail', lesson_id=lesson._id) }}" class="btn btn-primary">Start Lesson</a>
+                                <a href="{{ url_for('lesson_detail', lesson_id=lesson._id) }}" class="btn btn-primary">
+                                    {% if lesson._id|string in completed_lesson_ids %}{{ t.review_lesson }}{% else %}{{ t.start_lesson }}{% endif %}
+                                </a>
                                 {% if session.get('is_admin') %}
                                     <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteModal" data-lesson-id="{{ lesson._id }}" data-lesson-title="{{ lesson.title }}">
                                         Delete Lesson

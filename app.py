@@ -12,10 +12,13 @@ import boto3
 from botocore.exceptions import ClientError
 import datetime
 import re
-load_dotenv()
+# load_dotenv()
+app_path = os.path.join(os.path.dirname(__file__), '.')
+dotenv_path = os.path.join(app_path, '.env')
+load_dotenv(dotenv_path)
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', '!hUcAZCNrL-HM&-')
+app.secret_key = os.environ.get('SECRET_KEY', os.environ.get('SECRET_KEY'))
 
 # MongoDB connection
 mongo_uri = os.environ.get('MONGO_URI')
@@ -68,6 +71,45 @@ def sanitize_slide_content(content):
     if not text:
         return None
     return content
+
+def lesson_has_quiz(lesson):
+    quiz = lesson.get('quiz')
+    return bool(quiz and quiz.get('questions'))
+
+def is_lesson_completed(lesson, user_id):
+    completions = lesson.get('completions', {})
+    if user_id in completions:
+        return True
+    if lesson_has_quiz(lesson):
+        return user_id in lesson['quiz'].get('completed_by', [])
+    return False
+
+def mark_lesson_completed(lesson_id, user_id):
+    lessons_collection.update_one(
+        {'_id': ObjectId(lesson_id)},
+        {'$set': {f'completions.{user_id}': {'completed_at': datetime.datetime.utcnow()}}}
+    )
+
+def get_user_completed_lessons(user_id):
+    completed = []
+    for lesson in lessons_collection.find():
+        if not is_lesson_completed(lesson, user_id):
+            continue
+        completion = lesson.get('completions', {}).get(user_id, {})
+        completed_at = completion.get('completed_at')
+        if not completed_at and lesson_has_quiz(lesson):
+            quiz_results = lesson['quiz'].get('results', {})
+            if user_id in quiz_results:
+                completed_at = datetime.datetime.utcnow()
+        if not completed_at:
+            completed_at = lesson.get('date_created', datetime.datetime.utcnow())
+        completed.append({
+            '_id': lesson['_id'],
+            'title': lesson['title'],
+            'completed_at': completed_at,
+        })
+    completed.sort(key=lambda x: x['completed_at'], reverse=True)
+    return completed
 
 def login_required(f):
     @wraps(f)
@@ -149,9 +191,7 @@ def logout():
 @login_required
 def dashboard():
     user_id = str(session['user_id'])
-    
-    # Get completed lessons (simplified - you may want to add a completed_lessons collection)
-    completed_lessons = []
+    completed_lessons = get_user_completed_lessons(user_id)
     
     # Get quiz results
     quizzes = list(quizzes_collection.find())
@@ -175,8 +215,12 @@ def dashboard():
 @app.route('/lessons')
 @login_required
 def lessons():
+    user_id = str(session['user_id'])
     lessons = list(lessons_collection.find())
-    return render_template('lessons.html', lessons=lessons)
+    completed_lesson_ids = [
+        str(lesson['_id']) for lesson in lessons if is_lesson_completed(lesson, user_id)
+    ]
+    return render_template('lessons.html', lessons=lessons, completed_lesson_ids=completed_lesson_ids)
 
 @app.route('/lesson/<lesson_id>')
 @login_required
@@ -193,7 +237,16 @@ def lesson_detail(lesson_id):
     current_idx = lesson_ids.index(str(lesson_id)) if str(lesson_id) in lesson_ids else -1
     previous_lesson = lessons[current_idx - 1] if current_idx > 0 else None
     next_lesson = lessons[current_idx + 1] if current_idx < len(lessons) - 1 else None
-    return render_template('lesson_detail.html', lesson=lesson, previous_lesson=previous_lesson, next_lesson=next_lesson)
+    user_id = str(session['user_id'])
+    lesson_completed = is_lesson_completed(lesson, user_id)
+    return render_template(
+        'lesson_detail.html',
+        lesson=lesson,
+        previous_lesson=previous_lesson,
+        next_lesson=next_lesson,
+        lesson_completed=lesson_completed,
+        lesson_has_quiz=lesson_has_quiz(lesson),
+    )
 
 @app.route('/create_lesson', methods=['GET', 'POST'])
 @login_required
@@ -442,7 +495,49 @@ def reset_quiz(quiz_id):
 @app.route('/lesson_history')
 @login_required
 def lesson_history():
-    return render_template('lesson_history.html')
+    user_id = str(session['user_id'])
+    completed_lessons = get_user_completed_lessons(user_id)
+    return render_template('lesson_history.html', completed_lessons=completed_lessons)
+
+@app.route('/complete_lesson/<lesson_id>', methods=['POST'])
+@login_required
+def complete_lesson(lesson_id):
+    try:
+        lesson = lessons_collection.find_one({'_id': ObjectId(lesson_id)})
+    except Exception:
+        lesson = None
+    if not lesson:
+        flash('Lesson not found.', 'error')
+        return redirect(url_for('lessons'))
+
+    user_id = str(session['user_id'])
+    if lesson_has_quiz(lesson) and user_id not in lesson.get('quiz', {}).get('completed_by', []):
+        flash(g.t.get('complete_quiz_first', 'Complete the lesson quiz first.'), 'error')
+        return redirect(url_for('lesson_detail', lesson_id=lesson_id))
+
+    if not is_lesson_completed(lesson, user_id):
+        mark_lesson_completed(lesson_id, user_id)
+        flash(g.t.get('lesson_complete_success', 'Lesson marked as completed!'), 'success')
+    return redirect(url_for('lesson_detail', lesson_id=lesson_id))
+
+@app.route('/reset_lesson/<lesson_id>', methods=['POST'])
+@login_required
+def reset_lesson(lesson_id):
+    try:
+        lesson = lessons_collection.find_one({'_id': ObjectId(lesson_id)})
+    except Exception:
+        lesson = None
+    if not lesson:
+        flash('Lesson not found.', 'error')
+        return redirect(url_for('lessons'))
+
+    user_id = str(session['user_id'])
+    lessons_collection.update_one(
+        {'_id': ObjectId(lesson_id)},
+        {'$unset': {f'completions.{user_id}': ''}}
+    )
+    flash(translations[session.get('locale', 'en')].get('lesson_reset_success', 'Lesson has been reset.'), 'success')
+    return redirect(url_for('lesson_detail', lesson_id=lesson_id))
 
 @app.route('/quiz_history')
 @login_required
@@ -635,6 +730,7 @@ def take_lesson_quiz(lesson_id):
     if user_id not in quiz['completed_by']:
         quiz['completed_by'].append(user_id)
     lessons_collection.update_one({'_id': ObjectId(lesson_id)}, {'$set': {'quiz': quiz}})
+    mark_lesson_completed(lesson_id, user_id)
     flash(f'Quiz submitted! Your score: {score}/{total}', 'success')
     return redirect(url_for('lesson_detail', lesson_id=lesson_id))
 
@@ -653,7 +749,10 @@ def reset_lesson_quiz(lesson_id):
         quiz['completed_by'].remove(user_id)
     if 'results' in quiz and user_id in quiz['results']:
         del quiz['results'][user_id]
-    lessons_collection.update_one({'_id': ObjectId(lesson_id)}, {'$set': {'quiz': quiz}})
+    lessons_collection.update_one(
+        {'_id': ObjectId(lesson_id)},
+        {'$set': {'quiz': quiz}, '$unset': {f'completions.{user_id}': ''}}
+    )
     flash('Quiz reset. You can take it again.', 'success')
     return redirect(url_for('lesson_detail', lesson_id=lesson_id))
 

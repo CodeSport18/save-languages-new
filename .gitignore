@@ -1,6 +1,7 @@
 # Sensitive files
 password.txt
 secret_key.txt
+old_README.md
 
 # Competitive Coding
 competitive_coding.py

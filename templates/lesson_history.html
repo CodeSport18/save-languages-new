@@ -18,15 +18,9 @@
                     {% for lesson in completed_lessons %}
                         <tr>
                             <td>{{ lesson.title }}</td>
+                            <td>{{ format_date(lesson.completed_at) }}</td>
                             <td>
-                                {% if lesson.date_created and lesson.date_created.strftime %}
-                                    {{ lesson.date_created.strftime('%B %d, %Y') }}
-                                {% else %}
-                                    {{ lesson.date_created }}
-                                {% endif %}
-                            </td>
-                            <td>
-                                <a href="{{ url_for('view_lesson', lesson_id=lesson._id) }}" class="btn btn-sm btn-outline-primary">
+                                <a href="{{ url_for('lesson_detail', lesson_id=lesson._id) }}" class="btn btn-sm btn-outline-primary">
                                     {{ t.review_lesson }}
                                 </a>
                             </td>

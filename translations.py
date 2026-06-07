@@ -2,6 +2,9 @@ translations = {
     'en': {
         'dashboard': 'Dashboard',
         'lessons': 'Lessons',
+        'mark_lesson_complete': 'Complete Lesson',
+        'lesson_complete_success': 'Lesson marked as completed!',
+        'complete_quiz_first': 'Complete the lesson quiz before marking this lesson as done.',
         'quizzes': 'Independent Quizzes',
         'completed_on': 'Completed on',
         'taken_on': 'Taken on',

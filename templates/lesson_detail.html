@@ -14,8 +14,11 @@
         </div>
     </div>
     <div class="card shadow-lg">
-        <div class="card-header lesson-title-header">
+        <div class="card-header lesson-title-header d-flex justify-content-between align-items-center">
             <h2 class="mb-0"><i class="fas fa-book-open mr-2"></i>{{ lesson.title }}</h2>
+            {% if lesson_completed %}
+                <span class="badge badge-success">{{ t.completed }}</span>
+            {% endif %}
         </div>
         
         {% if lesson.is_slide_format %}
@@ -127,6 +130,13 @@
             <div class="card-body lesson-content">
                 {{ lesson.content|safe }}
             </div>
+            {% if not lesson_completed and not lesson_has_quiz %}
+                <div class="card-body border-top">
+                    <form method="POST" action="{{ url_for('complete_lesson', lesson_id=lesson._id) }}">
+                        <button type="submit" class="btn btn-success">{{ t.mark_lesson_complete }}</button>
+                    </form>
+                </div>
+            {% endif %}
         {% endif %}
         
         <!-- Add this after the lesson content -->
@@ -187,6 +197,20 @@
                     </button>
                 </div>
                 <div>
+                    {% if lesson_completed %}
+                        <form method="POST" action="{{ url_for('reset_lesson', lesson_id=lesson._id) }}"
+                              onsubmit="return confirm('{{ t.confirm_reset_lesson }}');" class="d-inline mr-2">
+                            <button type="submit" class="btn btn-outline-secondary">
+                                {{ t.retake_lesson }}
+                            </button>
+                        </form>
+                    {% elif lesson.is_slide_format and not lesson_has_quiz %}
+                        <form method="POST" action="{{ url_for('complete_lesson', lesson_id=lesson._id) }}" id="completeLessonForm" class="d-inline mr-2" style="display:none;">
+                            <button type="submit" class="btn btn-success" id="completeLessonBtn">
+                                {{ t.mark_lesson_complete }}
+                            </button>
+                        </form>
+                    {% endif %}
                     {% if session.is_admin %}
                         <a href="{{ url_for('edit_lesson', lesson_id=lesson._id) }}" class="btn btn-warning mr-2">
                             <i class="fas fa-edit mr-2"></i>{{ t.edit_lesson }}
@@ -657,6 +681,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Also try on initial load (after fetch)
     // tryAutoplayCurrentAudio();
 
+    const lessonHasQuiz = {{ lesson_has_quiz|tojson }};
+    const lessonAlreadyCompleted = {{ lesson_completed|tojson }};
+    let lessonCompletionSubmitted = lessonAlreadyCompleted;
+
     function updateFooterNavButtons() {
         const slides = document.querySelectorAll('.carousel-item');
         const activeIdx = Array.from(slides).findIndex(slide => slide.classList.contains('active'));
@@ -664,7 +692,22 @@ document.addEventListener('DOMContentLoaded', function() {
         const nextBtn = document.getElementById('footerNextSlideBtn');
         prevBtn.style.display = (activeIdx > 0) ? '' : 'none';
         nextBtn.style.display = (activeIdx < slides.length - 1) ? '' : 'none';
+        maybeMarkLessonComplete(activeIdx, slides.length);
     }
+
+    function maybeMarkLessonComplete(activeIdx, totalSlides) {
+        if (lessonHasQuiz || lessonCompletionSubmitted || totalSlides === 0) return;
+        const completeForm = document.getElementById('completeLessonForm');
+        const onLastSlide = activeIdx === totalSlides - 1;
+        if (completeForm) {
+            completeForm.style.display = onLastSlide ? '' : 'none';
+        }
+        if (onLastSlide && completeForm && !lessonCompletionSubmitted) {
+            lessonCompletionSubmitted = true;
+            completeForm.submit();
+        }
+    }
+
     $('#lessonSlides').on('slid.bs.carousel', function () {
         updateFooterNavButtons();
         tryAutoplayCurrentAudio && tryAutoplayCurrentAudio();
