@@ -4,11 +4,16 @@
 <div class="container mt-4">
     <div class="card">
         <div class="card-header">
-            <h2>{{ t.edit_lesson }}: {{ lesson.title }}</h2>
-            <p class="text-muted mb-0">{{ t.current_slides }}: {{ lesson.slides|length }}</p>
+            <h2 id="editLessonHeading">{{ t.edit_lesson }}: {{ lesson.title }}</h2>
+            <p class="text-muted mb-0">{{ t.current_slides if t.current_slides else 'Current slides' }}: {{ lesson.slides|length }}</p>
         </div>
         <div class="card-body">
             <form method="POST" enctype="multipart/form-data" id="editLessonForm">
+                <div class="form-group mb-4">
+                    <label for="lesson_title" class="form-label fw-bold">{{ t.lesson_title }}</label>
+                    <input type="text" class="form-control" id="lesson_title" name="lesson_title" value="{{ lesson.title }}" required maxlength="200">
+                </div>
+
                 <div id="slides-container">
                     {% for slide in lesson.slides %}
                     <div class="slide-editor mb-4" data-slide="existing-{{ loop.index0 }}">
@@ -58,9 +63,158 @@
                     {{ t.add_slide }}
                 </button>
 
+                <div class="card mt-4 mb-4">
+                    <div class="card-header">
+                        <h4>{{ t.lesson_quiz }}</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" id="hasQuiz" name="has_quiz" {% if lesson.quiz and lesson.quiz.questions %}checked{% endif %}>
+                            <label class="form-check-label" for="hasQuiz">{{ t.add_lesson_quiz }}</label>
+                        </div>
+                        <div id="quizSection" style="display: {% if lesson.quiz and lesson.quiz.questions %}block{% else %}none{% endif %};">
+                            <div id="questionContainer">
+                                {% if lesson.quiz and lesson.quiz.questions %}
+                                    {% for q in lesson.quiz.questions %}
+                                    <div class="question-block mb-4"
+                                         data-type="{{ q.type or 'short_answer' }}"
+                                         data-answer="{{ q.answer or '' }}"
+                                         data-audio-slide="{{ q.audio_slide_index if q.audio_slide_index is defined else '' }}"
+                                         data-image-slides="{{ (q.image_slide_indexes or [])|join(',') }}">
+                                        <div class="form-group">
+                                            <label>{{ t.question }} {{ loop.index }}</label>
+                                            <input type="text" class="form-control" name="quiz_questions[]" value="{{ q.question or '' }}" placeholder="{{ t.listen_choose_image }}">
+                                        </div>
+                                        <div class="form-group quiz-question-image-group">
+                                            <label>{{ t.question_image_optional }}</label>
+                                            <div class="d-flex align-items-center flex-wrap">
+                                                <input type="file" class="quiz-question-image-input" accept="image/*" style="display:none" onchange="handleQuizQuestionImageUpload(this)">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary mr-2" onclick="this.parentElement.querySelector('.quiz-question-image-input').click()">{{ t.add_question_image }}</button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger quiz-question-image-remove" style="display:{{ 'inline-block' if q.image_url else 'none' }};" onclick="removeQuizQuestionImage(this)">{{ t.remove_question_image }}</button>
+                                                <input type="hidden" name="quiz_question_image_url[]" class="quiz-question-image-url" value="{{ q.image_url or '' }}">
+                                            </div>
+                                            <img class="quiz-question-image-preview mt-2 img-thumbnail" alt="" {% if q.image_url %}src="{{ q.image_url }}" style="max-height:160px;"{% else %}style="display:none; max-height:160px;"{% endif %}>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>{{ t.question_type }}</label>
+                                            <select class="form-control quiz-question-type" name="quiz_question_types[]" onchange="handleQuestionTypeChange(this)">
+                                                <option value="short_answer" {% if not q.type or q.type == 'short_answer' %}selected{% endif %}>{{ t.short_answer }}</option>
+                                                <option value="multiple_choice" {% if q.type == 'multiple_choice' %}selected{% endif %}>{{ t.multiple_choice }}</option>
+                                                <option value="true_false" {% if q.type == 'true_false' %}selected{% endif %}>{{ t.true_false }}</option>
+                                                <option value="audio_image" {% if q.type == 'audio_image' %}selected{% endif %}>{{ t.audio_image }}</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group quiz-options-group" style="display: {% if q.type == 'multiple_choice' %}block{% else %}none{% endif %};">
+                                            <label>{{ t.options }}</label>
+                                            <div class="quiz-options-list">
+                                                {% if q.type == 'multiple_choice' and q.options %}
+                                                    {% for opt in q.options %}
+                                                    <div class="input-group mb-2">
+                                                        <div class="input-group-prepend"><span class="input-group-text">{{ loop.index }}</span></div>
+                                                        <input type="text" class="form-control" name="quiz_option_{{ loop.index }}[]" value="{{ opt }}">
+                                                        <div class="input-group-append"><button type="button" class="btn btn-outline-danger" onclick="this.parentElement.parentElement.remove()">&times;</button></div>
+                                                    </div>
+                                                    {% endfor %}
+                                                {% endif %}
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="addOption(this)">{{ t.add_option }}</button>
+                                        </div>
+                                        <div class="form-group quiz-audio-image-group" style="display: {% if q.type == 'audio_image' %}block{% else %}none{% endif %};">
+                                            <label>{{ t.select_lesson_audio }}</label>
+                                            <select class="form-control quiz-audio-slide mb-2" name="quiz_audio_slide[]"></select>
+                                            <audio class="quiz-audio-preview mb-3 w-100" controls style="display:none;"></audio>
+                                            <div class="row">
+                                                {% for i in range(1, 5) %}
+                                                <div class="col-md-6 mb-2">
+                                                    <label>{{ t.select_image_option }} {{ i }}</label>
+                                                    <select class="form-control quiz-image-slide" name="quiz_image_slide_{{ i }}[]" data-option="{{ i }}"></select>
+                                                    <img class="quiz-image-preview mt-1 img-thumbnail" alt="" style="display:none; max-height:100px;">
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="refreshAudioImageSelectors(this.closest('.question-block'))">{{ t.refresh_slide_media }}</button>
+                                        </div>
+                                        <div class="form-group quiz-answer-group">
+                                            <label>{% if q.type == 'audio_image' %}{{ t.correct_image_option }}{% else %}{{ t.answer }}{% endif %}</label>
+                                            {% if q.type == 'true_false' %}
+                                            <select class="form-control quiz-answer-input" name="quiz_answers[]">
+                                                <option value="True" {% if q.answer == 'True' %}selected{% endif %}>True</option>
+                                                <option value="False" {% if q.answer == 'False' %}selected{% endif %}>False</option>
+                                            </select>
+                                            {% elif q.type == 'audio_image' %}
+                                            <select class="form-control quiz-answer-input" name="quiz_answers[]">
+                                                {% for i in range(1, 5) %}
+                                                <option value="{{ i }}" {% if q.answer == (i|string) %}selected{% endif %}>{{ i }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            {% else %}
+                                            <input type="text" class="form-control quiz-answer-input" name="quiz_answers[]" value="{{ q.answer or '' }}" {% if q.type == 'multiple_choice' %}placeholder="{{ t.enter_correct_option_number }}"{% endif %}>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                <div class="question-block mb-4">
+                                    <div class="form-group">
+                                        <label>{{ t.question }} 1</label>
+                                        <input type="text" class="form-control" name="quiz_questions[]" placeholder="{{ t.listen_choose_image }}">
+                                    </div>
+                                    <div class="form-group quiz-question-image-group">
+                                        <label>{{ t.question_image_optional }}</label>
+                                        <div class="d-flex align-items-center flex-wrap">
+                                            <input type="file" class="quiz-question-image-input" accept="image/*" style="display:none" onchange="handleQuizQuestionImageUpload(this)">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary mr-2" onclick="this.parentElement.querySelector('.quiz-question-image-input').click()">{{ t.add_question_image }}</button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger quiz-question-image-remove" style="display:none" onclick="removeQuizQuestionImage(this)">{{ t.remove_question_image }}</button>
+                                            <input type="hidden" name="quiz_question_image_url[]" class="quiz-question-image-url" value="">
+                                        </div>
+                                        <img class="quiz-question-image-preview mt-2 img-thumbnail" alt="" style="display:none; max-height:160px;">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>{{ t.question_type }}</label>
+                                        <select class="form-control quiz-question-type" name="quiz_question_types[]" onchange="handleQuestionTypeChange(this)">
+                                            <option value="short_answer">{{ t.short_answer }}</option>
+                                            <option value="multiple_choice">{{ t.multiple_choice }}</option>
+                                            <option value="true_false">{{ t.true_false }}</option>
+                                            <option value="audio_image">{{ t.audio_image }}</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group quiz-options-group" style="display: none;">
+                                        <label>{{ t.options }}</label>
+                                        <div class="quiz-options-list"></div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="addOption(this)">{{ t.add_option }}</button>
+                                    </div>
+                                    <div class="form-group quiz-audio-image-group" style="display: none;">
+                                        <label>{{ t.select_lesson_audio }}</label>
+                                        <select class="form-control quiz-audio-slide mb-2" name="quiz_audio_slide[]"></select>
+                                        <audio class="quiz-audio-preview mb-3 w-100" controls style="display:none;"></audio>
+                                        <div class="row">
+                                            {% for i in range(1, 5) %}
+                                            <div class="col-md-6 mb-2">
+                                                <label>{{ t.select_image_option }} {{ i }}</label>
+                                                <select class="form-control quiz-image-slide" name="quiz_image_slide_{{ i }}[]" data-option="{{ i }}"></select>
+                                                <img class="quiz-image-preview mt-1 img-thumbnail" alt="" style="display:none; max-height:100px;">
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="refreshAudioImageSelectors(this.closest('.question-block'))">{{ t.refresh_slide_media }}</button>
+                                    </div>
+                                    <div class="form-group quiz-answer-group">
+                                        <label>{{ t.answer }}</label>
+                                        <input type="text" class="form-control quiz-answer-input" name="quiz_answers[]">
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <button type="button" class="btn btn-secondary" onclick="addQuestion()">
+                                {{ t.add_question }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-group mt-4">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save mr-2"></i>{{ t.add_slides_to_lesson }}
+                        <i class="fas fa-save mr-2"></i>{{ t.save_lesson_changes if t.save_lesson_changes else 'Save Changes' }}
                     </button>
                     <a href="{{ url_for('lesson_detail', lesson_id=lesson._id) }}" class="btn btn-outline-secondary ml-2">
                         <i class="fas fa-times mr-2"></i>{{ t.cancel }}
@@ -390,6 +544,17 @@ async function handleAudioUpload(input, slideIndex) {
     }
 }
 
+function getSlideEditor(slideIndex) {
+    // Prefer data-slide lookup (works for both "existing-N" and numeric ids)
+    let slideEditor = document.querySelector(`.slide-editor[data-slide="${slideIndex}"]`);
+    if (slideEditor) return slideEditor;
+    // Fallback: normalize "existing-N" / numeric index into a position
+    let idx = (typeof slideIndex === 'string' && slideIndex.startsWith('existing-'))
+        ? parseInt(slideIndex.replace('existing-', ''), 10)
+        : Number(slideIndex);
+    return document.querySelectorAll('.slide-editor')[idx] || null;
+}
+
 function openRecordModal(slideIndex) {
     currentAudioSlideIndex = slideIndex;
     $('#audioRecordModal').modal('show');
@@ -438,8 +603,11 @@ document.getElementById('saveRecordingBtn').onclick = async function() {
     let blob = new Blob(recordedChunks, { type: 'audio/webm' });
     let formData = new FormData();
     formData.append('audio', blob, 'recording.webm');
-    let slideEditors = document.querySelectorAll('.slide-editor');
-    let slideEditor = slideEditors[currentAudioSlideIndex];
+    let slideEditor = getSlideEditor(currentAudioSlideIndex);
+    if (!slideEditor) {
+        alert('Could not find the slide to save audio to. Please try again.');
+        return;
+    }
     let audioPreview = slideEditor.querySelector('.audio-preview');
     audioPreview.style.display = 'block';
     audioPreview.innerHTML = '<span><i class="fas fa-spinner fa-spin"></i> Uploading...</span>';
@@ -460,6 +628,258 @@ document.getElementById('saveRecordingBtn').onclick = async function() {
     }
     $('#audioRecordModal').modal('hide');
 };
+
+// Quiz builders (including audio → choose image)
+document.getElementById('hasQuiz').addEventListener('change', function() {
+    document.getElementById('quizSection').style.display = this.checked ? 'block' : 'none';
+});
+
+function getLessonMediaOptions() {
+    const slides = document.querySelectorAll('.slide-editor');
+    const audioOptions = [];
+    const imageOptions = [];
+    slides.forEach((slide, index) => {
+        const audioUrl = (slide.querySelector('.slide-audio-url') || {}).value || '';
+        const imageUrl = (slide.querySelector('.slide-image-url') || {}).value || '';
+        const label = `{{ t.slide }} ${index + 1}`;
+        if (audioUrl) audioOptions.push({ index, label, url: audioUrl });
+        if (imageUrl) imageOptions.push({ index, label, url: imageUrl });
+    });
+    return { audioOptions, imageOptions };
+}
+
+function fillSelect(select, options, emptyLabel, selectedValue) {
+    const current = selectedValue != null && selectedValue !== '' ? String(selectedValue) : select.value;
+    select.innerHTML = '';
+    const empty = document.createElement('option');
+    empty.value = '';
+    empty.textContent = emptyLabel;
+    select.appendChild(empty);
+    options.forEach(opt => {
+        const option = document.createElement('option');
+        option.value = String(opt.index);
+        option.textContent = opt.label;
+        option.dataset.url = opt.url;
+        if (String(opt.index) === current) option.selected = true;
+        select.appendChild(option);
+    });
+}
+
+function updateAudioImagePreviews(block) {
+    const audioSelect = block.querySelector('.quiz-audio-slide');
+    const audioPreview = block.querySelector('.quiz-audio-preview');
+    if (audioSelect && audioPreview) {
+        const selected = audioSelect.options[audioSelect.selectedIndex];
+        const url = selected && selected.dataset.url ? selected.dataset.url : '';
+        if (url) {
+            audioPreview.src = url;
+            audioPreview.style.display = 'block';
+        } else {
+            audioPreview.removeAttribute('src');
+            audioPreview.style.display = 'none';
+        }
+    }
+    block.querySelectorAll('.quiz-image-slide').forEach(select => {
+        const preview = select.parentElement.querySelector('.quiz-image-preview');
+        const selected = select.options[select.selectedIndex];
+        const url = selected && selected.dataset.url ? selected.dataset.url : '';
+        if (preview) {
+            if (url) {
+                preview.src = url;
+                preview.style.display = 'block';
+            } else {
+                preview.removeAttribute('src');
+                preview.style.display = 'none';
+            }
+        }
+    });
+}
+
+function refreshAudioImageSelectors(block, preferred) {
+    preferred = preferred || {};
+    const { audioOptions, imageOptions } = getLessonMediaOptions();
+    const audioSelect = block.querySelector('.quiz-audio-slide');
+    if (audioSelect) {
+        fillSelect(
+            audioSelect,
+            audioOptions,
+            audioOptions.length ? '—' : '{{ t.no_slide_audio_yet }}',
+            preferred.audioSlide
+        );
+        audioSelect.onchange = () => updateAudioImagePreviews(block);
+    }
+    block.querySelectorAll('.quiz-image-slide').forEach(select => {
+        const optNum = select.dataset.option;
+        const preferredVal = preferred.imageSlides ? preferred.imageSlides[Number(optNum) - 1] : undefined;
+        fillSelect(
+            select,
+            imageOptions,
+            imageOptions.length ? '—' : '{{ t.no_slide_images_yet }}',
+            preferredVal
+        );
+        select.onchange = () => updateAudioImagePreviews(block);
+    });
+    updateAudioImagePreviews(block);
+}
+
+function handleQuestionTypeChange(select) {
+    const block = select.closest('.question-block');
+    const optionsGroup = block.querySelector('.quiz-options-group');
+    const audioImageGroup = block.querySelector('.quiz-audio-image-group');
+    const answerGroup = block.querySelector('.quiz-answer-group');
+    let answerInput = block.querySelector('.quiz-answer-input');
+    const questionInput = block.querySelector('input[name="quiz_questions[]"]');
+
+    optionsGroup.style.display = 'none';
+    audioImageGroup.style.display = 'none';
+    answerGroup.style.display = '';
+
+    if (select.value === 'multiple_choice') {
+        optionsGroup.style.display = '';
+        answerGroup.innerHTML = `<label>{{ t.answer }}</label><input type="text" class="form-control quiz-answer-input" name="quiz_answers[]" placeholder="{{ t.enter_correct_option_number }}" value="${answerInput && answerInput.tagName === 'INPUT' ? answerInput.value : ''}">`;
+    } else if (select.value === 'true_false') {
+        const current = answerInput ? answerInput.value : 'True';
+        answerGroup.innerHTML = `<label>{{ t.answer }}</label><select class="form-control quiz-answer-input" name="quiz_answers[]"><option value="True"${current === 'True' ? ' selected' : ''}>True</option><option value="False"${current === 'False' ? ' selected' : ''}>False</option></select>`;
+    } else if (select.value === 'audio_image') {
+        audioImageGroup.style.display = '';
+        if (questionInput && !questionInput.value.trim()) {
+            questionInput.value = '{{ t.listen_choose_image }}';
+        }
+        const current = answerInput ? answerInput.value : '1';
+        answerGroup.innerHTML = `<label>{{ t.correct_image_option }}</label><select class="form-control quiz-answer-input" name="quiz_answers[]">${[1,2,3,4].map(i => `<option value="${i}"${String(i) === String(current) ? ' selected' : ''}>${i}</option>`).join('')}</select>`;
+        const imageSlides = (block.dataset.imageSlides || '').split(',');
+        refreshAudioImageSelectors(block, {
+            audioSlide: block.dataset.audioSlide || '',
+            imageSlides
+        });
+    } else {
+        answerGroup.innerHTML = `<label>{{ t.answer }}</label><input type="text" class="form-control quiz-answer-input" name="quiz_answers[]" value="${answerInput && answerInput.tagName === 'INPUT' ? answerInput.value : ''}">`;
+    }
+}
+
+function addQuestion() {
+    const container = document.getElementById('questionContainer');
+    const questionCount = container.querySelectorAll('.question-block').length + 1;
+    const questionBlock = document.createElement('div');
+    questionBlock.className = 'question-block mb-4';
+    questionBlock.innerHTML = `
+        <div class="form-group">
+            <label>{{ t.question }} ${questionCount}</label>
+            <input type="text" class="form-control" name="quiz_questions[]" placeholder="{{ t.listen_choose_image }}">
+        </div>
+        <div class="form-group quiz-question-image-group">
+            <label>{{ t.question_image_optional }}</label>
+            <div class="d-flex align-items-center flex-wrap">
+                <input type="file" class="quiz-question-image-input" accept="image/*" style="display:none" onchange="handleQuizQuestionImageUpload(this)">
+                <button type="button" class="btn btn-sm btn-outline-secondary mr-2" onclick="this.parentElement.querySelector('.quiz-question-image-input').click()">{{ t.add_question_image }}</button>
+                <button type="button" class="btn btn-sm btn-outline-danger quiz-question-image-remove" style="display:none" onclick="removeQuizQuestionImage(this)">{{ t.remove_question_image }}</button>
+                <input type="hidden" name="quiz_question_image_url[]" class="quiz-question-image-url" value="">
+            </div>
+            <img class="quiz-question-image-preview mt-2 img-thumbnail" alt="" style="display:none; max-height:160px;">
+        </div>
+        <div class="form-group">
+            <label>{{ t.question_type }}</label>
+            <select class="form-control quiz-question-type" name="quiz_question_types[]" onchange="handleQuestionTypeChange(this)">
+                <option value="short_answer">{{ t.short_answer }}</option>
+                <option value="multiple_choice">{{ t.multiple_choice }}</option>
+                <option value="true_false">{{ t.true_false }}</option>
+                <option value="audio_image">{{ t.audio_image }}</option>
+            </select>
+        </div>
+        <div class="form-group quiz-options-group" style="display: none;">
+            <label>{{ t.options }}</label>
+            <div class="quiz-options-list"></div>
+            <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="addOption(this)">{{ t.add_option }}</button>
+        </div>
+        <div class="form-group quiz-audio-image-group" style="display: none;">
+            <label>{{ t.select_lesson_audio }}</label>
+            <select class="form-control quiz-audio-slide mb-2" name="quiz_audio_slide[]"></select>
+            <audio class="quiz-audio-preview mb-3 w-100" controls style="display:none;"></audio>
+            <div class="row">
+                ${[1,2,3,4].map(i => `
+                <div class="col-md-6 mb-2">
+                    <label>{{ t.select_image_option }} ${i}</label>
+                    <select class="form-control quiz-image-slide" name="quiz_image_slide_${i}[]" data-option="${i}"></select>
+                    <img class="quiz-image-preview mt-1 img-thumbnail" alt="" style="display:none; max-height:100px;">
+                </div>`).join('')}
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="refreshAudioImageSelectors(this.closest('.question-block'))">{{ t.refresh_slide_media }}</button>
+        </div>
+        <div class="form-group quiz-answer-group">
+            <label>{{ t.answer }}</label>
+            <input type="text" class="form-control quiz-answer-input" name="quiz_answers[]">
+        </div>
+    `;
+    container.appendChild(questionBlock);
+    refreshAudioImageSelectors(questionBlock);
+}
+
+async function handleQuizQuestionImageUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const block = input.closest('.question-block');
+    const preview = block.querySelector('.quiz-question-image-preview');
+    const hidden = block.querySelector('.quiz-question-image-url');
+    const removeBtn = block.querySelector('.quiz-question-image-remove');
+    preview.style.display = 'block';
+    preview.alt = 'Uploading...';
+    const formData = new FormData();
+    formData.append('image', file);
+    try {
+        const response = await fetch('/upload_inline_image', { method: 'POST', body: formData });
+        const data = await response.json();
+        if (data.success) {
+            hidden.value = data.url;
+            preview.src = data.url;
+            preview.alt = '';
+            removeBtn.style.display = '';
+        } else {
+            alert(data.error || 'Failed to upload image');
+            preview.style.display = 'none';
+        }
+    } catch (err) {
+        alert('Failed to upload image');
+        preview.style.display = 'none';
+    }
+    input.value = '';
+}
+
+function removeQuizQuestionImage(btn) {
+    const block = btn.closest('.question-block');
+    block.querySelector('.quiz-question-image-url').value = '';
+    const preview = block.querySelector('.quiz-question-image-preview');
+    preview.removeAttribute('src');
+    preview.style.display = 'none';
+    btn.style.display = 'none';
+}
+
+function addOption(btn) {
+    const optionsList = btn.parentElement.querySelector('.quiz-options-list');
+    const optionCount = optionsList.children.length + 1;
+    const optionDiv = document.createElement('div');
+    optionDiv.className = 'input-group mb-2';
+    optionDiv.innerHTML = `<div class="input-group-prepend"><span class="input-group-text">${optionCount}</span></div><input type="text" class="form-control" name="quiz_option_${optionCount}[]"><div class="input-group-append"><button type="button" class="btn btn-outline-danger" onclick="this.parentElement.parentElement.remove()">&times;</button></div>`;
+    optionsList.appendChild(optionDiv);
+}
+
+document.querySelectorAll('#questionContainer .question-block').forEach(block => {
+    const typeSelect = block.querySelector('.quiz-question-type');
+    if (typeSelect && typeSelect.value === 'audio_image') {
+        refreshAudioImageSelectors(block, {
+            audioSlide: block.dataset.audioSlide || '',
+            imageSlides: (block.dataset.imageSlides || '').split(',')
+        });
+    } else if (block.querySelector('.quiz-audio-slide')) {
+        // Keep empty placeholder options so form indexes stay aligned
+        refreshAudioImageSelectors(block);
+    }
+});
+
+// Keep page heading in sync while renaming
+document.getElementById('lesson_title').addEventListener('input', function() {
+    const title = this.value.trim() || 'Untitled';
+    document.getElementById('editLessonHeading').textContent = `{{ t.edit_lesson }}: ${title}`;
+});
 
 // Sync all rich editors before form submission
 document.getElementById('editLessonForm').addEventListener('submit', function(e) {

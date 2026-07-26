@@ -74,26 +74,54 @@
                         <div class="carousel-item">
                             <div class="slide-container d-flex flex-column align-items-center justify-content-center" style="min-height:400px;">
                                 <h3 class="mb-4">{{ t.lesson_quiz }}</h3>
-                                <div class="w-100" style="max-width:600px;">
+                                <div class="w-100" style="max-width:720px;">
                                     <form method="POST" action="{{ url_for('take_lesson_quiz', lesson_id=lesson._id) }}" id="lessonQuizForm">
                                         {% for q in lesson.quiz.questions %}
                                             {% set q_idx = loop.index0 %}
-                                            <div class="form-group mb-4">
-                                                <label><b>{{ t.question }} {{ loop.index }}:</b> {{ q.question }}</label>
+                                            <div class="form-group mb-4 quiz-question-take">
+                                                <label><b>{{ t.question }} {{ loop.index }}:</b> {{ q.question or t.listen_choose_image }}</label>
+                                                {% if q.image_url %}
+                                                <div class="mb-3">
+                                                    <img src="{{ q.image_url }}" alt="" class="img-fluid rounded quiz-question-prompt-image" style="max-height:240px;">
+                                                </div>
+                                                {% endif %}
                                                 {% if q.type == 'short_answer' or not q.type %}
-                                                <input type="text" name="answers[]" class="form-control" required>
+                                                <input type="text" name="answer_{{ q_idx }}" class="form-control" required>
                                                 {% elif q.type == 'multiple_choice' %}
                                                     {% for opt in q.options %}
                                                         <div class="form-check">
-                                                            <input class="form-check-input" type="radio" name="answers[]" id="q{{ q_idx }}_opt{{ loop.index0 }}" value="{{ loop.index }}" required>
+                                                            <input class="form-check-input" type="radio" name="answer_{{ q_idx }}" id="q{{ q_idx }}_opt{{ loop.index0 }}" value="{{ loop.index }}" required>
                                                             <label class="form-check-label" for="q{{ q_idx }}_opt{{ loop.index0 }}">{{ opt }}</label>
                                                         </div>
                                                     {% endfor %}
                                                 {% elif q.type == 'true_false' %}
-                                                    <select name="answers[]" class="form-control" required>
+                                                    <select name="answer_{{ q_idx }}" class="form-control" required>
                                                         <option value="True">True</option>
                                                         <option value="False">False</option>
                                                     </select>
+                                                {% elif q.type == 'audio_image' %}
+                                                    {% if q.audio_url %}
+                                                    <div class="mb-3">
+                                                        <audio controls src="{{ q.audio_url }}" class="w-100"></audio>
+                                                    </div>
+                                                    {% endif %}
+                                                    <div class="row quiz-image-choices">
+                                                        {% for img in q.image_options %}
+                                                        <div class="col-6 mb-3">
+                                                            <label class="quiz-image-choice d-block" for="q{{ q_idx }}_img{{ loop.index0 }}">
+                                                                <input class="sr-only quiz-image-radio" type="radio" name="answer_{{ q_idx }}" id="q{{ q_idx }}_img{{ loop.index0 }}" value="{{ loop.index }}" required>
+                                                                <span class="quiz-image-choice-frame">
+                                                                    {% if img %}
+                                                                    <img src="{{ img }}" alt="Option {{ loop.index }}" class="img-fluid">
+                                                                    {% else %}
+                                                                    <span class="text-muted">No image</span>
+                                                                    {% endif %}
+                                                                    <span class="quiz-image-choice-num">{{ loop.index }}</span>
+                                                                </span>
+                                                            </label>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
                                                 {% endif %}
                                             </div>
                                         {% endfor %}
@@ -174,9 +202,37 @@
                                         {% for r in lesson.quiz.results[session.user_id].details %}
                                         <tr>
                                             <td>{{ loop.index }}</td>
-                                            <td>{{ r.question }}</td>
-                                            <td>{{ r.your_answer }}</td>
-                                            <td>{{ r.correct_answer }}</td>
+                                            <td>
+                                                {{ r.question }}
+                                                {% if r.image_url %}
+                                                <div class="mt-2"><img src="{{ r.image_url }}" alt="" class="img-thumbnail" style="max-height:100px;"></div>
+                                                {% endif %}
+                                                {% if r.type == 'audio_image' and r.audio_url %}
+                                                <div class="mt-2"><audio controls src="{{ r.audio_url }}" style="max-width:220px;"></audio></div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if r.type == 'audio_image' and r.image_options and r.your_answer_index %}
+                                                    {% set yi = r.your_answer_index|int %}
+                                                    {% if yi >= 1 and yi <= (r.image_options|length) and r.image_options[yi - 1] %}
+                                                    <img src="{{ r.image_options[yi - 1] }}" alt="{{ r.your_answer }}" class="img-thumbnail" style="max-height:80px;">
+                                                    {% endif %}
+                                                    <div class="small">{{ r.your_answer }}</div>
+                                                {% else %}
+                                                    {{ r.your_answer }}
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if r.type == 'audio_image' and r.image_options and r.correct_answer_index %}
+                                                    {% set ci = r.correct_answer_index|int %}
+                                                    {% if ci >= 1 and ci <= (r.image_options|length) and r.image_options[ci - 1] %}
+                                                    <img src="{{ r.image_options[ci - 1] }}" alt="{{ r.correct_answer }}" class="img-thumbnail" style="max-height:80px;">
+                                                    {% endif %}
+                                                    <div class="small">{{ r.correct_answer }}</div>
+                                                {% else %}
+                                                    {{ r.correct_answer }}
+                                                {% endif %}
+                                            </td>
                                             <td>{% if r.is_correct %}<span class="text-success">&#10003;</span>{% else %}<span class="text-danger">&#10007;</span>{% endif %}</td>
                                         </tr>
                                         {% endfor %}
@@ -228,6 +284,56 @@
 </div>
 
 <style>
+.quiz-image-choice {
+    cursor: pointer;
+    margin: 0;
+}
+.quiz-image-choice-frame {
+    display: block;
+    position: relative;
+    border: 3px solid #dee2e6;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #f8f9fa;
+    min-height: 120px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.quiz-image-choice-frame img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    display: block;
+}
+.quiz-image-choice-num {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(0,0,0,0.65);
+    color: #fff;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+}
+.quiz-image-radio:checked + .quiz-image-choice-frame,
+.quiz-image-choice:has(.quiz-image-radio:checked) .quiz-image-choice-frame {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.25);
+}
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    border: 0;
+}
+
 .title-image {
     max-height: 300px;
     width: auto;

@@ -38,7 +38,12 @@
                         {% for r in result.details %}
                         <tr>
                             <td>{{ loop.index }}</td>
-                            <td>{{ r.question }}</td>
+                            <td>
+                                {{ r.question }}
+                                {% if r.image_url %}
+                                <div class="mt-2"><img src="{{ r.image_url }}" alt="" class="img-thumbnail" style="max-height:100px;"></div>
+                                {% endif %}
+                            </td>
                             <td>{{ r.your_answer }}</td>
                             <td>{{ r.correct_answer }}</td>
                             <td>{% if r.is_correct %}<span class="text-success">&#10003;</span>{% else %}<span class="text-danger">&#10007;</span>{% endif %}</td>
@@ -53,17 +58,22 @@
                         {% set q_idx = loop.index0 %}
                         <div class="form-group mb-4">
                             <label><b>{{ t.question }} {{ loop.index }}:</b> {{ q.question }}</label>
+                            {% if q.image_url %}
+                            <div class="mb-3">
+                                <img src="{{ q.image_url }}" alt="" class="img-fluid rounded" style="max-height:240px;">
+                            </div>
+                            {% endif %}
                             {% if q.type == 'short_answer' or not q.type %}
-                            <input type="text" name="answers[]" class="form-control" required>
+                            <input type="text" name="answer_{{ q_idx }}" class="form-control" required>
                             {% elif q.type == 'multiple_choice' %}
                                 {% for opt in q.options %}
                                     <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="answers[]" id="q{{ q_idx }}_opt{{ loop.index0 }}" value="{{ loop.index }}" required>
+                                        <input class="form-check-input" type="radio" name="answer_{{ q_idx }}" id="q{{ q_idx }}_opt{{ loop.index0 }}" value="{{ loop.index }}" required>
                                         <label class="form-check-label" for="q{{ q_idx }}_opt{{ loop.index0 }}">{{ opt }}</label>
                                     </div>
                                 {% endfor %}
                             {% elif q.type == 'true_false' %}
-                                <select name="answers[]" class="form-control" required>
+                                <select name="answer_{{ q_idx }}" class="form-control" required>
                                     <option value="True">True</option>
                                     <option value="False">False</option>
                                 </select>

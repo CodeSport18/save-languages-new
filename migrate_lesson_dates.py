@@ -1,7 +1,10 @@
 from pymongo import MongoClient
 import os
+from pathlib import Path
+from dotenv import load_dotenv
 import datetime
 
+load_dotenv(Path(__file__).resolve().parent / '.env', override=True)
 mongo_uri = os.environ.get('MONGO_URI')
 client = MongoClient(mongo_uri)
 db = client['koshur']

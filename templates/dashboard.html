@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2>{{ t.dashboard }}</h2>
+    <h2 style="text-align: center;">{{ t.dashboard }}</h2>
   
     <!-- Display Flash Messages -->
     <!-- {% with messages = get_flashed_messages(with_categories=true) %}
@@ -77,8 +77,8 @@
 
     <!-- Navigation Buttons -->
     <div class="mt-4">
-        <a href="/lessons" class="btn btn-primary">{{ t.view_all_lessons }}</a>
-        <a href="/quizzes" class="btn btn-primary">{{ t.view_all_quizzes }}</a>
+        <!-- <a href="/lessons" class="btn btn-primary">{{ t.view_all_lessons }}</a>
+        <a href="/quizzes" class="btn btn-primary">{{ t.view_all_quizzes }}</a> -->
         {% if session.is_admin %}
             <a href="/create_lesson" class="btn btn-secondary">{{ t.create_lesson }}</a>
             <a href="/create_quiz" class="btn btn-secondary">{{ t.create_quiz }}</a>

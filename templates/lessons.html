@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2>{{ t.available_lessons }}</h2>
+    <h2 style="text-align: center;">{{ t.available_lessons }}</h2>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -12,6 +12,7 @@
         {% endif %}
     {% endwith %}
 
+    <br>
     <div class="row">
         {% if lessons %}
             {% for lesson in lessons %}

@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2>{{ t.available_quizzes }}</h2>
+    <h2 style="text-align: center;">{{ t.available_quizzes }}</h2>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -12,6 +12,7 @@
         {% endif %}
     {% endwith %}
 
+    <br>
     <div class="row">
         {% if quizzes %}
             {% for quiz in quizzes %}
@@ -33,6 +34,11 @@
                                     Start Quiz
                                 {% endif %}
                             </a>
+                            {% if session.get('is_admin') %}
+                            <a href="{{ url_for('edit_quiz', quiz_id=quiz._id) }}" class="btn btn-warning ml-2">
+                                <i class="fas fa-edit"></i> {{ t.edit_quiz }}
+                            </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

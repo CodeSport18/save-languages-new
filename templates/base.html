@@ -106,7 +106,9 @@
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav mr-auto">
           <li class="nav-item"><a class="nav-link" href="/dashboard">{{ t.dashboard }}</a></li>
-          {% if session.user_id and session.is_admin %}
+          <li class="nav-item"><a class="nav-link" href="/lessons">{{ t.lessons }}</a></li>
+          <li class="nav-item"><a class="nav-link" href="/quizzes">{{ t.quizzes }}</a></li>
+          <!-- {% if session.user_id and session.is_admin %}
             <li class="nav-item font-weight-bold">
               <a class="nav-link text-warning" href="/create_lesson">
                 <i class="fas fa-plus-circle"></i> {{ t.create_lesson }}
@@ -117,11 +119,12 @@
                 <i class="fas fa-plus-circle"></i> {{ t.create_quiz }}
               </a>
             </li>
-          {% endif %}
+          {% endif %} -->
         </ul>
         <ul class="navbar-nav mr-2">
           {% if session.user_id %}
-            <li class="nav-item"><a class="nav-link" href="/logout">{{ t.logout }}</a></li>
+            <!-- <li class="nav-item"><a class="nav-link" href="/logout">{{ t.logout }}</a></li> -->
+            <li class="nav-item"><a class="nav-link" href="/logout">Log Out</a></li>
           {% else %}
             <li class="nav-item"><a class="nav-link" href="/login">{{ t.login }}</a></li>
             <li class="nav-item"><a class="nav-link" href="/register">{{ t.register }}</a></li>

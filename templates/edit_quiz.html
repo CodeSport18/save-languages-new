@@ -1,22 +1,78 @@
 {% extends "base.html" %}
-{% block title %}{{ t.create_quiz }}{% endblock %}
+{% block title %}{{ t.edit_quiz }}{% endblock %}
 {% block content %}
 <div class="container mt-4">
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
-                    <h3>{{ t.create_quiz }}</h3>
+                    <h3>{{ t.edit_quiz }}: {{ quiz.title }}</h3>
                 </div>
                 <div class="card-body">
                     <form method="POST" id="quizForm">
                         <div class="form-group">
                             <label for="quiz_title">{{ t.quiz_title }}</label>
-                            <input type="text" class="form-control" id="quiz_title" name="quiz_title" required>
+                            <input type="text" class="form-control" id="quiz_title" name="quiz_title" value="{{ quiz.title }}" required>
                         </div>
 
                         <div id="questionContainer">
-                            <!-- First question -->
+                            {% for q in quiz.questions %}
+                            <div class="question-block mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="mb-0">{{ t.question }} {{ loop.index }}</label>
+                                    {% if quiz.questions|length > 1 or loop.index0 > 0 %}
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeQuestion(this)">{{ t.remove_question }}</button>
+                                    {% endif %}
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" class="form-control" name="quiz_questions[]" value="{{ q.question or '' }}" required>
+                                </div>
+                                <div class="form-group quiz-question-image-group">
+                                    <label>{{ t.question_image_optional }}</label>
+                                    <div class="d-flex align-items-center flex-wrap">
+                                        <input type="file" class="quiz-question-image-input" accept="image/*" style="display:none" onchange="handleQuizQuestionImageUpload(this)">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary mr-2" onclick="this.parentElement.querySelector('.quiz-question-image-input').click()">{{ t.add_question_image }}</button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger quiz-question-image-remove" style="display:{{ 'inline-block' if q.image_url else 'none' }};" onclick="removeQuizQuestionImage(this)">{{ t.remove_question_image }}</button>
+                                        <input type="hidden" name="quiz_question_image_url[]" class="quiz-question-image-url" value="{{ q.image_url or '' }}">
+                                    </div>
+                                    <img class="quiz-question-image-preview mt-2 img-thumbnail" alt="" {% if q.image_url %}src="{{ q.image_url }}" style="max-height:160px;"{% else %}style="display:none; max-height:160px;"{% endif %}>
+                                </div>
+                                <div class="form-group">
+                                    <label>{{ t.question_type }}</label>
+                                    <select class="form-control quiz-question-type" name="quiz_question_types[]" onchange="handleQuestionTypeChange(this)">
+                                        <option value="short_answer" {% if not q.type or q.type == 'short_answer' %}selected{% endif %}>{{ t.short_answer }}</option>
+                                        <option value="multiple_choice" {% if q.type == 'multiple_choice' %}selected{% endif %}>{{ t.multiple_choice }}</option>
+                                        <option value="true_false" {% if q.type == 'true_false' %}selected{% endif %}>{{ t.true_false }}</option>
+                                    </select>
+                                </div>
+                                <div class="form-group quiz-options-group" style="display: {% if q.type == 'multiple_choice' %}block{% else %}none{% endif %};">
+                                    <label>{{ t.options }}</label>
+                                    <div class="quiz-options-list">
+                                        {% if q.type == 'multiple_choice' and q.options %}
+                                            {% for opt in q.options %}
+                                            <div class="input-group mb-2">
+                                                <div class="input-group-prepend"><span class="input-group-text">{{ loop.index }}</span></div>
+                                                <input type="text" class="form-control" name="quiz_option_{{ loop.index }}[]" value="{{ opt }}" required>
+                                                <div class="input-group-append"><button type="button" class="btn btn-outline-danger" onclick="this.parentElement.parentElement.remove()">&times;</button></div>
+                                            </div>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="addOption(this)">{{ t.add_option }}</button>
+                                </div>
+                                <div class="form-group quiz-answer-group">
+                                    <label>{{ t.answer }}</label>
+                                    {% if q.type == 'true_false' %}
+                                    <select class="form-control quiz-answer-input" name="quiz_answers[]" required>
+                                        <option value="True" {% if q.answer == 'True' %}selected{% endif %}>True</option>
+                                        <option value="False" {% if q.answer == 'False' %}selected{% endif %}>False</option>
+                                    </select>
+                                    {% else %}
+                                    <input type="text" class="form-control quiz-answer-input" name="quiz_answers[]" value="{{ q.answer or '' }}" {% if q.type == 'multiple_choice' %}placeholder="{{ t.enter_correct_option_number }}"{% endif %} required>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% else %}
                             <div class="question-block mb-4">
                                 <div class="form-group">
                                     <label>{{ t.question }} 1</label>
@@ -50,6 +106,7 @@
                                     <input type="text" class="form-control quiz-answer-input" name="quiz_answers[]" required>
                                 </div>
                             </div>
+                            {% endfor %}
                         </div>
                         
                         <button type="button" class="btn btn-secondary mb-3" onclick="addQuestion()">
@@ -57,7 +114,7 @@
                         </button>
 
                         <div class="mt-3">
-                            <button type="submit" class="btn btn-primary">{{ t.create_quiz }}</button>
+                            <button type="submit" class="btn btn-primary">{{ t.save_quiz_changes }}</button>
                             <a href="{{ url_for('quizzes') }}" class="btn btn-secondary">{{ t.cancel }}</a>
                         </div>
                     </form>
@@ -73,30 +130,40 @@ function handleQuestionTypeChange(select) {
     const optionsGroup = block.querySelector('.quiz-options-group');
     const answerGroup = block.querySelector('.quiz-answer-group');
     let answerInput = block.querySelector('.quiz-answer-input');
+    const current = answerInput ? answerInput.value : '';
     
     if (select.value === 'multiple_choice') {
         optionsGroup.style.display = '';
         answerGroup.style.display = '';
-        if (answerInput.tagName !== 'INPUT') {
-            answerGroup.innerHTML = `<label>{{ t.answer }}</label><input type="text" class="form-control quiz-answer-input" name="quiz_answers[]" placeholder="{{ t.enter_correct_option_number }}" required>`;
-        } else {
-            answerInput.type = 'text';
-            answerInput.placeholder = '{{ t.enter_correct_option_number }}';
-        }
+        answerGroup.innerHTML = `<label>{{ t.answer }}</label><input type="text" class="form-control quiz-answer-input" name="quiz_answers[]" placeholder="{{ t.enter_correct_option_number }}" value="${current}" required>`;
     } else if (select.value === 'true_false') {
         optionsGroup.style.display = 'none';
         answerGroup.style.display = '';
-        answerGroup.innerHTML = `<label>{{ t.answer }}</label><select class="form-control quiz-answer-input" name="quiz_answers[]" required><option value="True">True</option><option value="False">False</option></select>`;
+        answerGroup.innerHTML = `<label>{{ t.answer }}</label><select class="form-control quiz-answer-input" name="quiz_answers[]" required><option value="True"${current === 'True' ? ' selected' : ''}>True</option><option value="False"${current === 'False' ? ' selected' : ''}>False</option></select>`;
     } else {
         optionsGroup.style.display = 'none';
         answerGroup.style.display = '';
-        if (answerInput.tagName !== 'INPUT') {
-            answerGroup.innerHTML = `<label>{{ t.answer }}</label><input type="text" class="form-control quiz-answer-input" name="quiz_answers[]" required>`;
-        } else {
-            answerInput.type = 'text';
-            answerInput.placeholder = '';
-        }
+        answerGroup.innerHTML = `<label>{{ t.answer }}</label><input type="text" class="form-control quiz-answer-input" name="quiz_answers[]" value="${current}" required>`;
     }
+}
+
+function renumberQuestions() {
+    document.querySelectorAll('#questionContainer .question-block').forEach((block, index) => {
+        const label = block.querySelector('label.mb-0') || block.querySelector('.form-group label');
+        if (label && label.textContent.trim().startsWith('{{ t.question }}')) {
+            label.textContent = `{{ t.question }} ${index + 1}`;
+        }
+    });
+}
+
+function removeQuestion(btn) {
+    const container = document.getElementById('questionContainer');
+    if (container.querySelectorAll('.question-block').length <= 1) {
+        alert('A quiz needs at least one question.');
+        return;
+    }
+    btn.closest('.question-block').remove();
+    renumberQuestions();
 }
 
 function addQuestion() {
@@ -105,8 +172,11 @@ function addQuestion() {
     const questionBlock = document.createElement('div');
     questionBlock.className = 'question-block mb-4';
     questionBlock.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <label class="mb-0">{{ t.question }} ${questionCount}</label>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeQuestion(this)">{{ t.remove_question }}</button>
+        </div>
         <div class="form-group">
-            <label>{{ t.question }} ${questionCount}</label>
             <input type="text" class="form-control" name="quiz_questions[]" required>
         </div>
         <div class="form-group quiz-question-image-group">

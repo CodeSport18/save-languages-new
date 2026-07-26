@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g, abort, jsonify
 from functools import wraps
 import os
+from pathlib import Path
 from translations import translations
 from bson.objectid import ObjectId
 from pymongo import MongoClient
@@ -12,16 +13,26 @@ import boto3
 from botocore.exceptions import ClientError
 import datetime
 import re
-# load_dotenv()
-app_path = os.path.join(os.path.dirname(__file__), '.')
-dotenv_path = os.path.join(app_path, '.env')
-load_dotenv(dotenv_path)
+
+BASE_DIR = Path(__file__).resolve().parent
+ENV_PATH = BASE_DIR / '.env'
+# override=True so values in .env win over empty/stale shell env vars
+load_dotenv(ENV_PATH, override=True)
+
+def require_env(name):
+    value = os.environ.get(name)
+    if value is None or str(value).strip() == '':
+        raise RuntimeError(
+            f"Missing required environment variable {name}. "
+            f"Set it in {ENV_PATH} (see .env.template)."
+        )
+    return value.strip()
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', os.environ.get('SECRET_KEY'))
+app.secret_key = require_env('SECRET_KEY')
 
 # MongoDB connection
-mongo_uri = os.environ.get('MONGO_URI')
+mongo_uri = require_env('MONGO_URI')
 client = MongoClient(mongo_uri, tlsAllowInvalidCertificates=True)
 db = client['koshur']
 lessons_collection = db['lessons']
@@ -31,11 +42,11 @@ quizzes_collection = db['quizzes']
 # AWS S3 configuration
 s3_client = boto3.client(
     's3',
-    aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
-    aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
-    region_name=os.environ.get('AWS_REGION', 'us-east-1')
+    aws_access_key_id=require_env('AWS_ACCESS_KEY_ID'),
+    aws_secret_access_key=require_env('AWS_SECRET_ACCESS_KEY'),
+    region_name=os.environ.get('AWS_REGION', 'us-east-1').strip() or 'us-east-1'
 )
-S3_BUCKET = os.environ.get('S3_BUCKET')
+S3_BUCKET = require_env('S3_BUCKET')
 S3_BASE_URL = f"https://{S3_BUCKET}.s3.amazonaws.com"
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -71,6 +82,110 @@ def sanitize_slide_content(content):
     if not text:
         return None
     return content
+
+def _form_list_value(values, idx, default=''):
+    if idx < len(values):
+        return values[idx]
+    return default
+
+def _slide_url_at(urls, index_str):
+    try:
+        idx = int(str(index_str).strip())
+    except (TypeError, ValueError):
+        return None
+    if idx < 0 or idx >= len(urls):
+        return None
+    url = urls[idx]
+    return url if url else None
+
+def parse_lesson_quiz_questions(form, slide_image_urls, slide_audio_urls):
+    """Parse quiz questions from a lesson create/edit form."""
+    questions = form.getlist('quiz_questions[]')
+    answers = form.getlist('quiz_answers[]')
+    types = form.getlist('quiz_question_types[]')
+    audio_slides = form.getlist('quiz_audio_slide[]')
+    image_slide_lists = [
+        form.getlist('quiz_image_slide_1[]'),
+        form.getlist('quiz_image_slide_2[]'),
+        form.getlist('quiz_image_slide_3[]'),
+        form.getlist('quiz_image_slide_4[]'),
+    ]
+
+    quiz_questions = []
+    question_images = form.getlist('quiz_question_image_url[]')
+    for idx, q in enumerate(questions):
+        q_type = _form_list_value(types, idx, 'short_answer') or 'short_answer'
+        image_url = (_form_list_value(question_images, idx) or '').strip() or None
+        q_obj = {
+            'question': q,
+            'type': q_type,
+            'answer': (_form_list_value(answers, idx) or '').strip(),
+            'image_url': image_url,
+        }
+        if q_type == 'multiple_choice':
+            options = []
+            opt_idx = 1
+            while True:
+                opt_vals = form.getlist(f'quiz_option_{opt_idx}[]')
+                if not opt_vals:
+                    break
+                if len(opt_vals) > idx and opt_vals[idx]:
+                    options.append(opt_vals[idx])
+                opt_idx += 1
+            q_obj['options'] = options
+        elif q_type == 'audio_image':
+            audio_slide = _form_list_value(audio_slides, idx, '')
+            audio_url = _slide_url_at(slide_audio_urls, audio_slide)
+            image_options = []
+            image_slide_indexes = []
+            for image_list in image_slide_lists:
+                slide_idx = _form_list_value(image_list, idx, '')
+                image_slide_indexes.append(slide_idx)
+                image_options.append(_slide_url_at(slide_image_urls, slide_idx))
+            q_obj['audio_url'] = audio_url
+            q_obj['audio_slide_index'] = audio_slide
+            q_obj['image_options'] = image_options
+            q_obj['image_slide_indexes'] = image_slide_indexes
+        quiz_questions.append(q_obj)
+    return quiz_questions
+
+def get_quiz_user_answer(form, idx):
+    value = form.get(f'answer_{idx}')
+    if value is not None:
+        return value.strip()
+    answers = form.getlist('answers[]')
+    return answers[idx].strip() if idx < len(answers) else ''
+
+def parse_independent_quiz_questions(form):
+    """Parse questions from independent quiz create/edit forms."""
+    questions = form.getlist('quiz_questions[]')
+    answers = form.getlist('quiz_answers[]')
+    types = form.getlist('quiz_question_types[]')
+    question_images = form.getlist('quiz_question_image_url[]')
+
+    quiz_questions = []
+    for idx, q in enumerate(questions):
+        q_type = types[idx] if idx < len(types) else 'short_answer'
+        image_url = (question_images[idx] if idx < len(question_images) else '').strip() or None
+        q_obj = {
+            'question': q,
+            'type': q_type,
+            'answer': answers[idx] if idx < len(answers) else '',
+            'image_url': image_url,
+        }
+        if q_type == 'multiple_choice':
+            options = []
+            opt_idx = 1
+            while True:
+                opt_vals = form.getlist(f'quiz_option_{opt_idx}[]')
+                if not opt_vals:
+                    break
+                if len(opt_vals) > idx and opt_vals[idx]:
+                    options.append(opt_vals[idx])
+                opt_idx += 1
+            q_obj['options'] = options
+        quiz_questions.append(q_obj)
+    return quiz_questions
 
 def lesson_has_quiz(lesson):
     quiz = lesson.get('quiz')
@@ -284,37 +399,15 @@ def create_lesson():
         
         # Add quiz if present
         if request.form.get('has_quiz'):
-            questions = request.form.getlist('quiz_questions[]')
-            answers = request.form.getlist('quiz_answers[]')
-            types = request.form.getlist('quiz_question_types[]')
-            quiz_questions = []
-            for idx, q in enumerate(questions):
-                q_type = types[idx] if idx < len(types) else 'short_answer'
-                q_obj = {
-                    'question': q,
-                    'type': q_type,
-                    'answer': answers[idx] if idx < len(answers) else ''
-                }
-                if q_type == 'multiple_choice':
-                    # Collect all options for this question
-                    options = []
-                    opt_idx = 1
-                    while True:
-                        opt_key = f'quiz_option_{opt_idx}[]'
-                        opt_vals = request.form.getlist(opt_key)
-                        if not opt_vals:
-                            break
-                        # Each opt_vals is a list, one value per question block
-                        if len(opt_vals) > idx:
-                            options.append(opt_vals[idx])
-                        opt_idx += 1
-                    q_obj['options'] = options
-                quiz_questions.append(q_obj)
-            quiz_data = {
+            quiz_questions = parse_lesson_quiz_questions(
+                request.form,
+                [u for u in slide_image_urls],
+                [u for u in slide_audio_urls],
+            )
+            lesson['quiz'] = {
                 'questions': quiz_questions,
                 'completed_by': []
             }
-            lesson['quiz'] = quiz_data
         
         lessons_collection.insert_one(lesson)
         flash('Lesson created successfully!', 'success')
@@ -345,38 +438,12 @@ def create_quiz():
         return redirect(url_for('dashboard'))
     
     if request.method == 'POST':
-        title = request.form.get('quiz_title')
-        
-        # Get quiz questions with new structure
-        questions = request.form.getlist('quiz_questions[]')
-        answers = request.form.getlist('quiz_answers[]')
-        types = request.form.getlist('quiz_question_types[]')
-        
-        quiz_questions = []
-        for idx, q in enumerate(questions):
-            q_type = types[idx] if idx < len(types) else 'short_answer'
-            q_obj = {
-                'question': q,
-                'type': q_type,
-                'answer': answers[idx] if idx < len(answers) else ''
-            }
-            if q_type == 'multiple_choice':
-                # Collect all options for this question
-                options = []
-                opt_idx = 1
-                while True:
-                    opt_key = f'quiz_option_{opt_idx}[]'
-                    opt_vals = request.form.getlist(opt_key)
-                    if not opt_vals:
-                        break
-                    # Each opt_vals is a list, one value per question block
-                    if len(opt_vals) > idx:
-                        options.append(opt_vals[idx])
-                    opt_idx += 1
-                q_obj['options'] = options
-            quiz_questions.append(q_obj)
-        
-        # Create quiz document
+        title = (request.form.get('quiz_title') or '').strip()
+        if not title:
+            flash('Quiz title cannot be empty.', 'error')
+            return render_template('create_quiz.html')
+
+        quiz_questions = parse_independent_quiz_questions(request.form)
         quiz = {
             'title': title,
             'questions': quiz_questions,
@@ -389,6 +456,44 @@ def create_quiz():
         return redirect(url_for('quizzes'))
     
     return render_template('create_quiz.html')
+
+@app.route('/edit_quiz/<quiz_id>', methods=['GET', 'POST'])
+@login_required
+def edit_quiz(quiz_id):
+    if not session.get('is_admin', False):
+        flash('Access denied', 'error')
+        return redirect(url_for('dashboard'))
+
+    try:
+        quiz = quizzes_collection.find_one({'_id': ObjectId(quiz_id)})
+    except Exception:
+        quiz = None
+
+    if not quiz:
+        flash('Quiz not found.', 'error')
+        return redirect(url_for('quizzes'))
+
+    if request.method == 'POST':
+        title = (request.form.get('quiz_title') or '').strip()
+        if not title:
+            flash('Quiz title cannot be empty.', 'error')
+            return render_template('edit_quiz.html', quiz=quiz)
+
+        quiz_questions = parse_independent_quiz_questions(request.form)
+        quizzes_collection.update_one(
+            {'_id': ObjectId(quiz_id)},
+            {'$set': {
+                'title': title,
+                'questions': quiz_questions,
+                # Keep completion history; learners can retake if needed
+                'completed_by': quiz.get('completed_by', []),
+                'results': quiz.get('results', {}),
+            }}
+        )
+        flash('Independent quiz updated successfully!', 'success')
+        return redirect(url_for('quizzes'))
+
+    return render_template('edit_quiz.html', quiz=quiz)
 
 @app.route('/take_quiz/<quiz_id>', methods=['GET', 'POST'])
 @login_required
@@ -413,7 +518,6 @@ def take_quiz(quiz_id):
     
     if request.method == 'POST':
         questions = quiz['questions']
-        user_answers = request.form.getlist('answers[]')
         score = 0
         total = len(questions)
         results = []
@@ -421,29 +525,29 @@ def take_quiz(quiz_id):
         for idx, q in enumerate(questions):
             q_type = q.get('type', 'short_answer')
             correct = False
-            user_answer = user_answers[idx].strip() if idx < len(user_answers) else ''
+            user_answer = get_quiz_user_answer(request.form, idx)
             correct_answer = q.get('answer', '').strip()
+            user_answer_text = user_answer
+            correct_answer_text = correct_answer
             
             if q_type == 'short_answer':
                 correct = user_answer.lower().strip() == correct_answer.lower().strip()
             elif q_type == 'multiple_choice':
-                # For MC, user_answer is the selected option index (1-based as string), correct_answer is also 1-based as string
                 correct = user_answer == correct_answer
-                # For review, show the option text
-                user_answer_text = q['options'][int(user_answer)-1] if user_answer.isdigit() and 1 <= int(user_answer) <= len(q['options']) else user_answer
-                correct_answer_text = q['options'][int(correct_answer)-1] if correct_answer.isdigit() and 1 <= int(correct_answer) <= len(q['options']) else correct_answer
+                user_answer_text = q['options'][int(user_answer)-1] if user_answer.isdigit() and 1 <= int(user_answer) <= len(q.get('options', [])) else user_answer
+                correct_answer_text = q['options'][int(correct_answer)-1] if correct_answer.isdigit() and 1 <= int(correct_answer) <= len(q.get('options', [])) else correct_answer
             elif q_type == 'true_false':
                 correct = user_answer.lower() == correct_answer.lower()
                 user_answer_text = user_answer.capitalize()
                 correct_answer_text = correct_answer.capitalize()
-            else:
-                user_answer_text = user_answer
-                correct_answer_text = correct_answer
             
-            if q_type == 'multiple_choice' or q_type == 'true_false':
-                results.append({'question': q['question'], 'your_answer': user_answer_text, 'correct_answer': correct_answer_text, 'is_correct': correct})
-            else:
-                results.append({'question': q['question'], 'your_answer': user_answer, 'correct_answer': correct_answer, 'is_correct': correct})
+            results.append({
+                'question': q.get('question', ''),
+                'your_answer': user_answer_text,
+                'correct_answer': correct_answer_text,
+                'is_correct': correct,
+                'image_url': q.get('image_url'),
+            })
             
             if correct:
                 score += 1
@@ -628,6 +732,11 @@ def edit_lesson(lesson_id):
         return redirect(url_for('lessons'))
     
     if request.method == 'POST':
+        new_title = (request.form.get('lesson_title') or '').strip()
+        if not new_title:
+            flash('Lesson title cannot be empty.', 'error')
+            return render_template('edit_lesson.html', lesson=lesson)
+
         # Get all slides data (existing and new)
         slide_contents = request.form.getlist('slide_content')
         slide_image_urls = request.form.getlist('slide_image_url')
@@ -644,13 +753,36 @@ def edit_lesson(lesson_id):
             }
             updated_slides.append(slide)
 
-        # Replace the lesson's slides with the updated slides
+        # Update title and slides together
+        update_fields = {'title': new_title, 'slides': updated_slides}
+
+        if request.form.get('has_quiz'):
+            quiz_questions = parse_lesson_quiz_questions(
+                request.form,
+                slide_image_urls,
+                slide_audio_urls,
+            )
+            existing_quiz = lesson.get('quiz') or {}
+            update_fields['quiz'] = {
+                'questions': quiz_questions,
+                'completed_by': existing_quiz.get('completed_by', []),
+                'results': existing_quiz.get('results', {}),
+            }
+        elif lesson.get('quiz'):
+            # Quiz checkbox unchecked — remove quiz
+            lessons_collection.update_one(
+                {'_id': ObjectId(lesson_id)},
+                {'$set': update_fields, '$unset': {'quiz': ''}}
+            )
+            flash('Successfully updated the lesson!', 'success')
+            return redirect(url_for('lesson_detail', lesson_id=lesson_id))
+
         lessons_collection.update_one(
             {'_id': ObjectId(lesson_id)},
-            {'$set': {'slides': updated_slides}}
+            {'$set': update_fields}
         )
 
-        flash(f'Successfully updated slides for the lesson!', 'success')
+        flash('Successfully updated the lesson!', 'success')
         return redirect(url_for('lesson_detail', lesson_id=lesson_id))
     
     return render_template('edit_lesson.html', lesson=lesson)
@@ -684,7 +816,6 @@ def take_lesson_quiz(lesson_id):
     user_id = str(session['user_id'])
     quiz = lesson['quiz']
     questions = quiz['questions']
-    user_answers = request.form.getlist('answers[]')
     score = 0
     total = len(questions)
     results = []
@@ -692,27 +823,43 @@ def take_lesson_quiz(lesson_id):
     for idx, q in enumerate(questions):
         q_type = q.get('type', 'short_answer')
         correct = False
-        user_answer = user_answers[idx].strip() if idx < len(user_answers) else ''
+        user_answer = get_quiz_user_answer(request.form, idx)
         correct_answer = q.get('answer', '').strip()
+        user_answer_text = user_answer
+        correct_answer_text = correct_answer
+
         if q_type == 'short_answer':
             correct = user_answer.lower().strip() == correct_answer.lower().strip()
         elif q_type == 'multiple_choice':
-            # For MC, user_answer is the selected option index (1-based as string), correct_answer is also 1-based as string
             correct = user_answer == correct_answer
-            # For review, show the option text
-            user_answer_text = q['options'][int(user_answer)-1] if user_answer.isdigit() and 1 <= int(user_answer) <= len(q['options']) else user_answer
-            correct_answer_text = q['options'][int(correct_answer)-1] if correct_answer.isdigit() and 1 <= int(correct_answer) <= len(q['options']) else correct_answer
+            user_answer_text = q['options'][int(user_answer)-1] if user_answer.isdigit() and 1 <= int(user_answer) <= len(q.get('options', [])) else user_answer
+            correct_answer_text = q['options'][int(correct_answer)-1] if correct_answer.isdigit() and 1 <= int(correct_answer) <= len(q.get('options', [])) else correct_answer
         elif q_type == 'true_false':
             correct = user_answer.lower() == correct_answer.lower()
             user_answer_text = user_answer.capitalize()
             correct_answer_text = correct_answer.capitalize()
-        else:
-            user_answer_text = user_answer
-            correct_answer_text = correct_answer
-        if q_type == 'multiple_choice' or q_type == 'true_false':
-            results.append({'question': q['question'], 'your_answer': user_answer_text, 'correct_answer': correct_answer_text, 'is_correct': correct})
-        else:
-            results.append({'question': q['question'], 'your_answer': user_answer, 'correct_answer': correct_answer, 'is_correct': correct})
+        elif q_type == 'audio_image':
+            correct = user_answer == correct_answer
+            image_options = q.get('image_options') or []
+            def _option_label(choice):
+                if choice.isdigit() and 1 <= int(choice) <= len(image_options):
+                    return f"Image {choice}"
+                return choice or '—'
+            user_answer_text = _option_label(user_answer)
+            correct_answer_text = _option_label(correct_answer)
+
+        results.append({
+            'question': q.get('question') or 'Listen and choose the correct image',
+            'your_answer': user_answer_text,
+            'correct_answer': correct_answer_text,
+            'is_correct': correct,
+            'type': q_type,
+            'image_url': q.get('image_url'),
+            'audio_url': q.get('audio_url'),
+            'image_options': q.get('image_options') if q_type == 'audio_image' else None,
+            'your_answer_index': user_answer if q_type == 'audio_image' else None,
+            'correct_answer_index': correct_answer if q_type == 'audio_image' else None,
+        })
         if correct:
             score += 1
 
