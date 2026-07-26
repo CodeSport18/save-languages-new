@@ -2,6 +2,7 @@
 password.txt
 secret_key.txt
 old_README.md
+.env
 
 # Competitive Coding
 competitive_coding.py
